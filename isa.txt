@@ -1,0 +1,36 @@
+; r0:     PC
+; r1-r15: normal registers
+
+li rd,imm
+mv rd,r1
+
+add rd,r1,r2
+sub rd,r1,r2
+mul rd,r1,r2
+div rd,r1,r2
+
+not rd,r1
+and rd,r1,r2
+or rd,r1,r2
+xor rd,r1,r2
+sll rd,r1,r2
+slr rd,r1,r2
+sar rd,r1,r2
+
+call rd, dest
+
+; j dest -> mv r0,dest
+
+jnz dest,r1
+jz dest,r1
+jnzr r1,r2
+jzr r1,r2
+
+l8 rd,r1
+s8 r1,r2
+l16 rd,r1
+s16 r1,r2
+l32 rd,r1
+s32 r1,r2
+l64 rd,r1
+s64 r1,r2

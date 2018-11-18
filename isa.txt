@@ -26,6 +26,8 @@ jz r1,dest
 jnzr r2,r1
 jzr r2,r1
 
+; load destreg, [address]
+; store [address], value
 l8 rd,r1
 s8 r1,r2
 l16 rd,r1

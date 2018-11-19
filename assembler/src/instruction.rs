@@ -6,7 +6,7 @@ pub struct Instruction {
     pub rs1: u8,
     pub rs2: u8,
     pub rd: u8,
-    pub immediate: u64,
+    pub immediate: i64,
 }
 
 pub fn instruction_decode(instruction: u64) -> Instruction {
@@ -15,7 +15,7 @@ pub fn instruction_decode(instruction: u64) -> Instruction {
         rs1: (instruction >> 7 & 0xf) as u8,
         rs2: (instruction >> 11 & 0xf) as u8,
         rd: (instruction >> 15 & 0xf) as u8,
-        immediate: (instruction >> 19 & 0x1fffffffffff) as u64,
+        immediate: (instruction >> 19 & 0x1fffffffffff) as i64,
     }
 }
 
@@ -26,7 +26,7 @@ impl Instruction {
         res |= (self.rs1 as u64) << 7;
         res |= (self.rs2 as u64) << 11;
         res |= (self.rd as u64) << 15;
-        res |= self.immediate << 19;
+        res |= (self.immediate as u64) << 19;
         res
     }
 }

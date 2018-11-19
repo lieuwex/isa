@@ -44,3 +44,13 @@ Instruction encoding:
 +--------+------+------+------+---------------------+
 | opcode |  rd  |  r1  |  r2  |   immediate[0:44]   |
 +--------+------+------+------+---------------------+
+
+
+Calling convention:
+
+Push arguments on the stack in reverse order, such that the first argument is
+at the stack tip. Then push all closure items on the stack in reverse order,
+such that now the first closure item is at the stack tip. Then execute a call
+instruction.
+Afterwards, the caller should clean up the pushed values from the stack.
+The callee is responsible for backing up the link register on the stack.

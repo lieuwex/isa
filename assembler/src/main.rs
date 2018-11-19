@@ -1,15 +1,15 @@
 extern crate regex;
 
-mod opcode;
 mod instruction;
+mod opcode;
 mod parse;
 
-use std::process::exit;
+use parse::*;
 use std::env;
 use std::fs;
 use std::io::{self, Write};
-use parse::*;
 use std::mem::transmute;
+use std::process::exit;
 
 fn main() {
     let args: Vec<String> = env::args().collect();

@@ -1,7 +1,7 @@
-use std::collections::HashMap;
-use regex::{self, Regex};
-use opcode::*;
 use instruction;
+use opcode::*;
+use regex::{self, Regex};
+use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
 pub struct ParseError;
@@ -35,7 +35,7 @@ impl ParseContext {
 
         // skip lines without code
         if line.is_empty() {
-            return None
+            return None;
         }
 
         // if this is a label declaration line, add the label to the labels map and skip
@@ -45,9 +45,9 @@ impl ParseContext {
             Some(caps) => {
                 let label = &caps["label"];
                 self.labels.insert(label.to_string(), self.n_instructions);
-                return None
-            },
-            None => {},
+                return None;
+            }
+            None => {}
         }
 
         // helper function to retrieve a capture and convert it to a number
@@ -58,7 +58,7 @@ impl ParseContext {
 
         // the thing we're going to return, parse the instruction from the line too and
         // convert it to its opcode
-        let mut res = Instruction{
+        let mut res = Instruction {
             opcode: str_to_opcode(line.split(' ').next().unwrap()),
             rd: 0,
             rs1: 0,
@@ -80,42 +80,48 @@ impl ParseContext {
                 // character is a digit, otherwise we treat it as a unevaluated
                 // label reference.
                 let r2 = caps["r2"].to_string();
-                res.immediate =
-                    if r2.chars().next().unwrap().is_digit(10) {
-                        Immediate::Value(get_num(&caps, "r2"))
-                    } else {
-                        Immediate::LabelRef(r2, self.n_instructions)
-                    };
-            },
+                res.immediate = if r2.chars().next().unwrap().is_digit(10) {
+                    Immediate::Value(get_num(&caps, "r2"))
+                } else {
+                    Immediate::LabelRef(r2, self.n_instructions)
+                };
+            }
             Configuration::rd_r1_r2 => {
-                let instrreg = Regex::new(r"\w+\s*r(?P<r1>\d{1,2})\s*,\s*r(?P<r2>\d{1,2})\s*,\s*r(?P<r3>\d{1,2})").unwrap();
+                let instrreg = Regex::new(
+                    r"\w+\s*r(?P<r1>\d{1,2})\s*,\s*r(?P<r2>\d{1,2})\s*,\s*r(?P<r3>\d{1,2})",
+                ).unwrap();
                 let caps = instrreg.captures(line)?;
 
                 res.rd = get_num(&caps, "r1") as u8;
                 res.rs1 = get_num(&caps, "r2") as u8;
                 res.rs2 = get_num(&caps, "r3") as u8;
-            },
+            }
             Configuration::rd_r1 => {
-                let instrreg = Regex::new(r"\w+\s*r(?P<r1>\d{1,2})\s*,\s*r(?P<r2>\d{1,2})").unwrap();
+                let instrreg =
+                    Regex::new(r"\w+\s*r(?P<r1>\d{1,2})\s*,\s*r(?P<r2>\d{1,2})").unwrap();
                 let caps = instrreg.captures(line)?;
 
                 res.rd = get_num(&caps, "r1") as u8;
                 res.rs1 = get_num(&caps, "r2") as u8;
-            },
+            }
             Configuration::r1_r2 => {
-                let instrreg = Regex::new(r"\w+\s*r(?P<r1>\d{1,2})\s*,\s*r(?P<r2>\d{1,2})").unwrap();
+                let instrreg =
+                    Regex::new(r"\w+\s*r(?P<r1>\d{1,2})\s*,\s*r(?P<r2>\d{1,2})").unwrap();
                 let caps = instrreg.captures(line)?;
 
                 res.rs1 = get_num(&caps, "r1") as u8;
                 res.rs2 = get_num(&caps, "r2") as u8;
-            },
+            }
         };
 
         self.n_instructions += 8;
         Some(res)
     }
 
-    fn convert_instruction(&self, instr: &Instruction) -> Result<instruction::Instruction, ParseError> {
+    fn convert_instruction(
+        &self,
+        instr: &Instruction,
+    ) -> Result<instruction::Instruction, ParseError> {
         let immediate;
         match instr.immediate {
             Immediate::LabelRef(ref labelname, labelloc) => {
@@ -124,7 +130,7 @@ impl ParseContext {
                         immediate = instrloc - labelloc;
                     }
                     None => {
-                        return Err(ParseError{});
+                        return Err(ParseError {});
                     }
                 }
             }
@@ -133,7 +139,7 @@ impl ParseContext {
             }
         }
 
-        Ok(instruction::Instruction{
+        Ok(instruction::Instruction {
             opcode: instr.opcode,
             rs1: instr.rs1,
             rs2: instr.rs2,
@@ -144,7 +150,7 @@ impl ParseContext {
 }
 
 pub fn parse(prog: &str) -> Vec<Result<instruction::Instruction, ParseError>> {
-    let mut ctx = ParseContext{
+    let mut ctx = ParseContext {
         labels: HashMap::new(),
         n_instructions: 0,
     };

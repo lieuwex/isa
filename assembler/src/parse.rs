@@ -3,6 +3,9 @@ use regex::{self, Regex};
 use opcode::*;
 use instruction;
 
+#[derive(Debug, Clone)]
+pub struct ParseError;
+
 #[derive(Debug)]
 enum Immediate {
     Value(i64),
@@ -111,9 +114,36 @@ impl ParseContext {
         self.n_instructions += 8;
         Some(res)
     }
+
+    fn convert_instruction(&self, instr: &Instruction) -> Result<instruction::Instruction, ParseError> {
+        let immediate;
+        match instr.immediate {
+            Immediate::LabelRef(ref labelname, labelloc) => {
+                match self.labels.get(labelname.as_str()) {
+                    Some(instrloc) => {
+                        immediate = instrloc - labelloc;
+                    }
+                    None => {
+                        return Err(ParseError{});
+                    }
+                }
+            }
+            Immediate::Value(val) => {
+                immediate = val;
+            }
+        }
+
+        Ok(instruction::Instruction{
+            opcode: instr.opcode,
+            rs1: instr.rs1,
+            rs2: instr.rs2,
+            rd: instr.rd,
+            immediate: immediate,
+        })
+    }
 }
 
-pub fn parse(prog: &str) -> Vec<instruction::Instruction> {
+pub fn parse(prog: &str) -> Vec<Result<instruction::Instruction, ParseError>> {
     let mut ctx = ParseContext{
         labels: HashMap::new(),
         n_instructions: 0,
@@ -127,25 +157,8 @@ pub fn parse(prog: &str) -> Vec<instruction::Instruction> {
         }
     }
 
-    let mut res = vec![];
-    res.reserve(parsed.len());
-    for instr in parsed {
-        res.push(instruction::Instruction{
-            opcode: instr.opcode,
-            rs1: instr.rs1,
-            rs2: instr.rs2,
-            rd: instr.rd,
-            immediate: {
-                match instr.immediate {
-                    Immediate::LabelRef(s, labelloc) => {
-                        let instrloc = ctx.labels.get(s.as_str()).unwrap();
-                        instrloc - labelloc
-                    },
-                    Immediate::Value(val) => val,
-                }
-            },
-        });
-    }
-
-    res
+    parsed
+        .iter()
+        .map(|instr| ctx.convert_instruction(instr))
+        .collect()
 }

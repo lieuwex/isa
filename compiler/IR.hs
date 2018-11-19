@@ -4,10 +4,12 @@ module IR(buildIR) where
 import Control.Monad.State.Strict
 import Control.Monad.Except
 import Data.Int
+import Data.List
 import qualified Data.Map.Strict as Map
 import Data.Maybe
 
 import AST
+import ASTUtil
 
 
 type Id = Int
@@ -26,6 +28,10 @@ data IRIns
     | ILoad Int Reg Reg
     | IStore Int Reg Reg
     | ICall Reg Id
+    | IAlloc Reg Int
+    | IIncRef Reg
+    | IDecRef Reg
+    | ILiLabel Reg Name
   deriving (Show, Eq)
 
 data IRTerm
@@ -126,6 +132,57 @@ localVar name = do
         [] -> return Nothing
         (r:_) -> return (Just r)
 
+intoReg :: Name -> BM Reg
+intoReg name = localVar name >>= \case
+    Just reg -> return reg
+    Nothing -> gets (Map.lookup name . bsFuncMap) >>= \case
+        Just bid -> iAllocClosure bid []
+        Nothing -> if isBuiltin name
+                       then do
+                                funcname <- makeBuiltinClosure name
+                                r <- genReg
+                                addIns $ ILiLabel r funcname
+                                return r
+                       else fail $ "Use of undeclared variable '" ++ name ++ "'"
+
+makeBuiltinClosure :: Name -> BM Name
+makeBuiltinClosure name = do
+    curbb <- gets bsCurrent
+
+    let Just aop = builtinArith name
+    startbb1 <- newBBStay
+    startbb2 <- newBBStay
+
+    number <- genId
+    let funcname1 = "$bi" ++ show number
+        funcname2 = "$biC" ++ show number
+
+    registerFunc funcname1 startbb1
+    registerFunc funcname2 startbb2
+
+    switchBB startbb1
+    argreg <- genReg
+    addIns $ ILoad 64 argreg RSP
+    cloreg <- iAllocClosure startbb2 [argreg]
+    addIns $ IMov RRet cloreg
+    iRet
+
+    switchBB startbb2
+    r1 <- genReg
+    r2 <- genReg
+    addIns $ ILoad 64 r1 RSP
+    ptrreg <- genReg
+    r8 <- genReg
+    addIns $ ILi r8 8
+    addIns $ IArith AAdd ptrreg RSP r8
+    addIns $ ILoad 64 r2 ptrreg
+    addIns $ IArith aop RRet r1 r2
+    iRet
+
+    switchBB curbb
+
+    return funcname1
+
 addIns :: IRIns -> BM ()
 addIns ins = modifyBB $ \(BB bid inss term) -> BB bid (inss ++ [ins]) term
 
@@ -162,6 +219,31 @@ iPop sz r = do
 iRet :: BM ()
 iRet = addIns $ IMov RPC RLink
 
+iAllocClosure :: Id -> [Reg] -> BM Reg
+iAllocClosure bid frees = do
+    -- TODO: types and sizes of variables
+    fname <- (("$lam" ++) . show) <$> genId
+    registerFunc fname bid
+
+    labreg <- genReg
+    addIns $ ILiLabel labreg fname
+
+    cloreg <- genReg
+    addIns $ IAlloc cloreg (8 + length frees * 8)
+    addIns $ IStore 64 cloreg labreg
+
+    r8 <- genReg
+    addIns $ ILi r8 8
+
+    ptrreg <- genReg
+    addIns $ IMov ptrreg cloreg
+
+    forM_ frees $ \r -> do
+        addIns $ IArith AAdd ptrreg ptrreg r8
+        addIns $ IStore 64 ptrreg r
+
+    return cloreg
+
 
 buildIR :: Program -> Either String IR
 buildIR prog = do
@@ -192,7 +274,7 @@ compileExpr (ERef name) endbb = do
             setTerm $ TJmp endbb
             return r
         Nothing -> do
-            fail $ "Use of undeclared variable '" ++ name ++ "'"
+            fail $ "Reference to undeclared variable '" ++ name ++ "'"
             -- mp <- gets bsFuncMap
             -- case Map.lookup name mp of
             --     Just i -> do
@@ -200,12 +282,14 @@ compileExpr (ERef name) endbb = do
             --         addIns $ ICall r i
             --         return r
             --     Nothing ->
-            --         fail $ "Use of undeclared variable '" ++ name ++ "'"
+            --         fail $ "Reference to undeclared variable '" ++ name ++ "'"
+
 compileExpr (EInt num) endbb = do
     r <- genReg
     addIns $ ILi r (fromIntegral num)
     setTerm $ TJmp endbb
     return r
+
 compileExpr (ELet pairs body) endbb = do
     rs <- forM pairs $ \(_, expr) -> do
             bb <- newBBStay
@@ -217,6 +301,7 @@ compileExpr (ELet pairs body) endbb = do
     res <- compileExpr body endbb
     popScope
     return res
+
 compileExpr (ECall (ECall (ERef name) arg1) arg2) endbb
     | Just aop <- builtinArith name = do
         bb1 <- newBBStay
@@ -231,20 +316,36 @@ compileExpr (ECall (ECall (ERef name) arg1) arg2) endbb
         addIns $ IArith aop r r1 r2
         setTerm $ TJmp endbb
         return r
+
     | otherwise =
         gets bsFuncMap >>= \mp -> case Map.lookup name mp of
-            Just _ -> error "UNIMPLEMENTED"
+            Just _ -> error "USER-DEFINED FUNCTION CALLS UNIMPLEMENTED"
             Nothing -> fail $ "Use of undeclared function '" ++ name ++ "'"
--- compileExpr (ECall func arg) endbb = do
---     bb1 <- newBBStay
---     rfunc <- compileExpr func endbb
---     switchBB bb1
 
---     bb2 <- newBBStay
---     rarg <- compileExpr arg bb2
---     switchBB bb2
+compileExpr (ELambda name body) endbb = do
+    let frees = freeVars body \\ [name]
 
---     ;
+    regs <- mapM intoReg frees
+
+    startbb <- newBBStay
+    cloreg <- iAllocClosure startbb regs
+    setTerm $ TJmp endbb
+
+    switchBB startbb
+    -- TODO: Function prologue and epilogue
+    bb1 <- newBBStay
+    argreg <- genReg
+    addIns $ ILoad 64 argreg RSP
+    pushScope [(name, argreg)]
+    resreg <- compileExpr body bb1
+    popScope
+
+    switchBB bb1
+    addIns $ IMov RRet resreg
+    iRet
+
+    return cloreg
+
 
 builtinArith :: String -> Maybe ArithOp
 builtinArith "+" = Just AAdd
@@ -258,3 +359,6 @@ builtinArith ".<<" = Just ASll
 builtinArith ".>>" = Just ASlr
 builtinArith ".>>>" = Just ASar
 builtinArith _ = Nothing
+
+isBuiltin :: String -> Bool
+isBuiltin name = isJust (builtinArith name)

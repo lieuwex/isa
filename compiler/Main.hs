@@ -6,6 +6,7 @@ import System.Exit
 
 import IR
 import Parser
+-- import Preprocess
 
 
 handleError :: Either String a -> IO a
@@ -20,6 +21,8 @@ entryFile fname = do
     src <- readFile fname
     prog <- handleErrorShow $ parseProgram fname src
     print prog
+    -- let prog' = preprocess prog
+    -- print prog'
     ir <- handleError $ buildIR prog
     print ir
     -- opt <- handleError $ optimise ir

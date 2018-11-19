@@ -7,4 +7,6 @@
 
 def kaas = 42
 
-def main = 1 + 2
+def lam = \x -> x + 1
+
+def main = 1

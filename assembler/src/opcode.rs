@@ -120,8 +120,8 @@ pub fn opcode_to_configuration(opcode: Opcode) -> Configuration {
 
         Opcode::li => Configuration::rd_imm,
         Opcode::call => Configuration::rd_imm,
-        Opcode::jnzr => Configuration::rd_imm,
-        Opcode::jzr => Configuration::rd_imm,
+        Opcode::jnz => Configuration::rd_imm,
+        Opcode::jz => Configuration::rd_imm,
 
         Opcode::s8 => Configuration::r1_r2,
         Opcode::s16 => Configuration::r1_r2,
@@ -133,8 +133,8 @@ pub fn opcode_to_configuration(opcode: Opcode) -> Configuration {
         Opcode::l32 => Configuration::rd_r1,
         Opcode::l64 => Configuration::rd_r1,
         Opcode::not => Configuration::rd_r1,
-        Opcode::jnz => Configuration::rd_r1,
-        Opcode::jz => Configuration::rd_r1,
+        Opcode::jnzr => Configuration::rd_r1,
+        Opcode::jzr => Configuration::rd_r1,
         Opcode::mv => Configuration::rd_r1,
 
         // REVIEW

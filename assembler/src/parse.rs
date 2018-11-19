@@ -1,5 +1,6 @@
 use instruction;
 use std::fmt;
+use std::cell::Cell;
 use opcode::*;
 use regex::{self, Regex};
 use std::collections::HashMap;
@@ -36,6 +37,58 @@ struct ParseContext {
     n_instructions: i64,
 }
 
+// "tokenize"
+fn tokenize_line(l: &str) -> (String, Vec<String>) {
+    let cursor = Cell::new(0);
+    let chars: Vec<char> = l.chars().collect();
+
+    let skip_spaces = || {
+        let mut c = cursor.get();
+        while c < chars.len() && chars[c].is_whitespace() {
+            c += 1;
+        }
+        cursor.set(c);
+    };
+    let get_word = || {
+        let mut res = String::new();
+        let mut c = cursor.get();
+
+        while c < chars.len() && chars[c].is_alphanumeric() {
+            res.push(chars[c]);
+            c += 1;
+        }
+
+        cursor.set(c);
+        res
+    };
+    let skip = |n| {
+        cursor.set(cursor.get() + n);
+    };
+
+    skip_spaces();
+    let instruction = get_word();
+    skip_spaces();
+
+    let mut args = vec![];
+    while cursor.get() < chars.len() {
+        skip_spaces();
+
+        if chars[cursor.get()] == 'r' {
+            skip(1);
+        }
+
+        args.push(get_word());
+        skip_spaces();
+
+        if cursor.get() >= chars.len() || chars[cursor.get()] != ',' {
+            break;
+        }
+        skip(1);
+    }
+
+    (instruction, args)
+}
+
 impl ParseContext {
     fn parse_line(&mut self, line: &str, line_number: usize) -> Option<Instruction> {
         // remove comments and trim the line, we only need code
@@ -60,16 +113,12 @@ impl ParseContext {
             None => {}
         }
 
-        // helper function to retrieve a capture and convert it to a number
-        let get_num = |caps: &regex::Captures, cap: &str| {
-            let s = &caps[cap];
-            s.parse().unwrap()
-        };
+        let (instr, args) = tokenize_line(line);
 
         // the thing we're going to return, parse the instruction from the line too and
         // convert it to its opcode
         let mut res = Instruction {
-            opcode: str_to_opcode(line.split(' ').next()?),
+            opcode: str_to_opcode(instr.as_str()),
             rd: 0,
             rs1: 0,
             rs2: 0,
@@ -82,46 +131,30 @@ impl ParseContext {
         // values for every field
         match opcode_to_configuration(res.opcode) {
             Configuration::rd_imm => {
-                let instrreg = Regex::new(r"\w+\s*r(?P<r1>\d{1,2})\s*,\s*(?P<r2>\w+)").unwrap();
-                let caps = instrreg.captures(line)?;
-
-                res.rd = get_num(&caps, "r1") as u8;
+                res.rd = args[0].parse().unwrap();
 
                 // the immediate should be a literal value when the first
                 // character is a digit, otherwise we treat it as a unevaluated
                 // label reference.
-                let r2 = caps["r2"].to_string();
+                let r2 = &args[1];
                 res.immediate = if r2.chars().next()?.is_digit(10) {
-                    Immediate::Value(get_num(&caps, "r2"))
+                    Immediate::Value(r2.parse().unwrap())
                 } else {
-                    Immediate::LabelRef(r2, self.n_instructions)
+                    Immediate::LabelRef(r2.to_string(), self.n_instructions)
                 };
             }
             Configuration::rd_r1_r2 => {
-                let instrreg = Regex::new(
-                    r"\w+\s*r(?P<r1>\d{1,2})\s*,\s*r(?P<r2>\d{1,2})\s*,\s*r(?P<r3>\d{1,2})",
-                ).unwrap();
-                let caps = instrreg.captures(line)?;
-
-                res.rd = get_num(&caps, "r1") as u8;
-                res.rs1 = get_num(&caps, "r2") as u8;
-                res.rs2 = get_num(&caps, "r3") as u8;
+                res.rd = args[0].parse().unwrap();
+                res.rs1 = args[1].parse().unwrap();
+                res.rs2 = args[2].parse().unwrap();
             }
             Configuration::rd_r1 => {
-                let instrreg =
-                    Regex::new(r"\w+\s*r(?P<r1>\d{1,2})\s*,\s*r(?P<r2>\d{1,2})").unwrap();
-                let caps = instrreg.captures(line)?;
-
-                res.rd = get_num(&caps, "r1") as u8;
-                res.rs1 = get_num(&caps, "r2") as u8;
+                res.rd = args[0].parse().unwrap();
+                res.rs1 = args[1].parse().unwrap();
             }
             Configuration::r1_r2 => {
-                let instrreg =
-                    Regex::new(r"\w+\s*r(?P<r1>\d{1,2})\s*,\s*r(?P<r2>\d{1,2})").unwrap();
-                let caps = instrreg.captures(line)?;
-
-                res.rs1 = get_num(&caps, "r1") as u8;
-                res.rs2 = get_num(&caps, "r2") as u8;
+                res.rs1 = args[0].parse().unwrap();
+                res.rs2 = args[1].parse().unwrap();
             }
         };
 

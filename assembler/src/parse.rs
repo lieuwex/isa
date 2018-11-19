@@ -59,7 +59,7 @@ impl ParseContext {
         // the thing we're going to return, parse the instruction from the line too and
         // convert it to its opcode
         let mut res = Instruction {
-            opcode: str_to_opcode(line.split(' ').next().unwrap()),
+            opcode: str_to_opcode(line.split(' ').next()?),
             rd: 0,
             rs1: 0,
             rs2: 0,
@@ -80,7 +80,7 @@ impl ParseContext {
                 // character is a digit, otherwise we treat it as a unevaluated
                 // label reference.
                 let r2 = caps["r2"].to_string();
-                res.immediate = if r2.chars().next().unwrap().is_digit(10) {
+                res.immediate = if r2.chars().next()?.is_digit(10) {
                     Immediate::Value(get_num(&caps, "r2"))
                 } else {
                     Immediate::LabelRef(r2, self.n_instructions)
@@ -155,16 +155,15 @@ pub fn parse(prog: &str) -> Vec<Result<instruction::Instruction, ParseError>> {
         n_instructions: 0,
     };
 
-    let mut parsed = vec![];
-    for l in prog.lines() {
-        let instr = ctx.parse_line(l);
-        if instr.is_some() {
-            parsed.push(instr.unwrap());
-        }
-    }
+    let parsed: Vec<Instruction> = prog
+        .lines()
+        .map(|l| ctx.parse_line(l))
+        .filter(|x| x.is_some())
+        .map(|x| x.unwrap())
+        .collect();
 
     parsed
         .iter()
-        .map(|instr| ctx.convert_instruction(instr))
+        .map(|instr| ctx.convert_instruction(&instr))
         .collect()
 }

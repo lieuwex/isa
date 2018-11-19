@@ -38,55 +38,67 @@ struct ParseContext {
 }
 
 // "tokenize"
-fn tokenize_line(l: &str) -> (String, Vec<String>) {
-    let cursor = Cell::new(0);
-    let chars: Vec<char> = l.chars().collect();
+struct Tokenizer {
+    chars: Vec<char>,
+    cursor: usize,
+}
 
-    let skip_spaces = || {
-        let mut c = cursor.get();
-        while c < chars.len() && chars[c].is_whitespace() {
-            c += 1;
-        }
-        cursor.set(c);
-    };
-    let get_word = || {
-        let mut res = String::new();
-        let mut c = cursor.get();
-
-        while c < chars.len() && chars[c].is_alphanumeric() {
-            res.push(chars[c]);
-            c += 1;
-        }
-
-        cursor.set(c);
-        res
-    };
-    let skip = |n| {
-        cursor.set(cursor.get() + n);
-    };
-
-    skip_spaces();
-    let instruction = get_word();
-    skip_spaces();
-
-    let mut args = vec![];
-    while cursor.get() < chars.len() {
-        skip_spaces();
-
-        if chars[cursor.get()] == 'r' {
-            skip(1);
-        }
-
-        args.push(get_word());
-        skip_spaces();
-
-        if cursor.get() >= chars.len() || chars[cursor.get()] != ',' {
-            break;
-        }
-        skip(1);
+impl Tokenizer {
+    fn curr(&self) -> char {
+        self.chars[self.cursor]
+    }
+    fn inbound(&self) -> bool {
+        self.cursor < self.chars.len()
     }
 
-    (instruction, args)
+    fn skip(&mut self, n: usize) {
+        self.cursor += n;
+    }
+    fn skip_spaces(&mut self) {
+        while self.inbound() && self.curr().is_whitespace() {
+            self.cursor += 1;
+        }
+    }
+    fn get_word(&mut self) -> String {
+        let mut res = String::new();
+        while self.inbound() && self.curr().is_alphanumeric() {
+            res.push(self.curr());
+            self.cursor += 1;
+        }
+        res
+    }
+
+    pub fn tokenize(&mut self) -> (String, Vec<String>) {
+        self.skip_spaces();
+        let instruction = self.get_word();
+        self.skip_spaces();
+
+        let mut args = vec![];
+        while self.inbound() {
+            self.skip_spaces();
+
+            if self.curr() == 'r' {
+                self.skip(1);
+            }
+
+            args.push(self.get_word());
+            self.skip_spaces();
+
+            if !self.inbound() || self.curr() != ',' {
+                break;
+            }
+            self.skip(1);
+        }
+
+        (instruction, args)
+    }
+
+    pub fn new(s: &str) -> Self {
+        Self{
+            chars: s.chars().collect(),
+            cursor: 0,
+        }
+    }
 }
 
 impl ParseContext {
@@ -113,7 +125,7 @@ impl ParseContext {
             None => {}
         }
 
-        let (instr, args) = tokenize_line(line);
+        let (instr, args) = Tokenizer::new(line).tokenize();
 
         // the thing we're going to return, parse the instruction from the line too and
         // convert it to its opcode

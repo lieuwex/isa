@@ -1,10 +1,19 @@
 use instruction;
+use std::fmt;
 use opcode::*;
 use regex::{self, Regex};
 use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
-pub struct ParseError;
+pub struct ParseError {
+    description: String,
+    line_number: usize,
+}
+impl fmt::Display for ParseError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "parse error at line {}: {}", self.line_number, self.description)
+    }
+}
 
 #[derive(Debug)]
 enum Immediate {
@@ -19,6 +28,7 @@ struct Instruction {
     rs2: u8,
     rd: u8,
     immediate: Immediate,
+    line_number: usize,
 }
 
 struct ParseContext {
@@ -27,7 +37,7 @@ struct ParseContext {
 }
 
 impl ParseContext {
-    fn parse_line(&mut self, line: &str) -> Option<Instruction> {
+    fn parse_line(&mut self, line: &str, line_number: usize) -> Option<Instruction> {
         // remove comments and trim the line, we only need code
         let commentreg = Regex::new(r";.+$").unwrap();
         let line = commentreg.replace_all(line, "").into_owned();
@@ -64,6 +74,7 @@ impl ParseContext {
             rs1: 0,
             rs2: 0,
             immediate: Immediate::Value(0),
+            line_number: line_number,
         };
 
         // REVIEW: check if non decimal numbers are supported
@@ -130,7 +141,10 @@ impl ParseContext {
                         immediate = instrloc - labelloc;
                     }
                     None => {
-                        return Err(ParseError {});
+                        return Err(ParseError {
+                            description: format!("couldn't find label '{}'", labelname),
+                            line_number: instr.line_number
+                        });
                     }
                 }
             }
@@ -157,7 +171,8 @@ pub fn parse(prog: &str) -> Vec<Result<instruction::Instruction, ParseError>> {
 
     let parsed: Vec<Instruction> = prog
         .lines()
-        .map(|l| ctx.parse_line(l))
+        .enumerate()
+        .map(|(i, l)| ctx.parse_line(l, i))
         .filter(|x| x.is_some())
         .map(|x| x.unwrap())
         .collect();

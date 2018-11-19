@@ -11,13 +11,13 @@ use std::io::{self, Write};
 use std::mem::transmute;
 use std::process::exit;
 
-fn main() {
+fn main() -> Result<(), io::Error> {
     let args: Vec<String> = env::args().collect();
     let fname = &args[1];
 
     let mut stdout = io::stdout();
 
-    let s = fs::read_to_string(fname).unwrap();
+    let s = fs::read_to_string(fname)?;
     let instrs = parse(&s);
 
     let err = false;
@@ -26,10 +26,10 @@ fn main() {
             Ok(instr) => {
                 let val = instr.encode();
                 let bytes: [u8; 8] = unsafe { transmute(val.to_be()) };
-                stdout.write(&bytes).unwrap();
+                stdout.write(&bytes)?;
             }
-            Err(_) => {
-                eprintln!("error while parsing instruction");
+            Err(s) => {
+                eprintln!("{}", s);
             }
         }
     }
@@ -37,4 +37,5 @@ fn main() {
     if err {
         exit(1);
     }
+    Ok(())
 }

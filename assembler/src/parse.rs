@@ -1,7 +1,6 @@
 use instruction;
 use opcode::*;
-use regex::{self, Regex};
-use std::cell::Cell;
+use regex::{Regex};
 use std::collections::HashMap;
 use std::fmt;
 

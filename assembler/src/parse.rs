@@ -1,9 +1,9 @@
 use instruction;
-use std::fmt;
-use std::cell::Cell;
 use opcode::*;
 use regex::{self, Regex};
+use std::cell::Cell;
 use std::collections::HashMap;
+use std::fmt;
 
 #[derive(Debug, Clone)]
 pub struct ParseError {
@@ -12,7 +12,11 @@ pub struct ParseError {
 }
 impl fmt::Display for ParseError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "parse error at line {}: {}", self.line_number, self.description)
+        write!(
+            f,
+            "parse error at line {}: {}",
+            self.line_number, self.description
+        )
     }
 }
 
@@ -77,10 +81,6 @@ impl Tokenizer {
         while self.inbound() {
             self.skip_spaces();
 
-            if self.curr() == 'r' {
-                self.skip(1);
-            }
-
             args.push(self.get_word());
             self.skip_spaces();
 
@@ -94,7 +94,7 @@ impl Tokenizer {
     }
 
     pub fn new(s: &str) -> Self {
-        Self{
+        Self {
             chars: s.chars().collect(),
             cursor: 0,
         }
@@ -103,8 +103,12 @@ impl Tokenizer {
 
 impl ParseContext {
     fn parse_line(&mut self, line: &str, line_number: usize) -> Option<Instruction> {
+        lazy_static! {
+            static ref commentreg: Regex = Regex::new(r";.+$").unwrap();
+            static ref labelreg: Regex = Regex::new(r"(?i)^([a-z]\w*):$").unwrap();
+        }
+
         // remove comments and trim the line, we only need code
-        let commentreg = Regex::new(r";.+$").unwrap();
         let line = commentreg.replace_all(line, "").into_owned();
         let line = line.trim();
 
@@ -115,10 +119,9 @@ impl ParseContext {
 
         // if this is a label declaration line, add the label to the labels map and skip
         // the current line
-        let labelreg = Regex::new(r"^(?P<label>\w+):$").unwrap();
         match labelreg.captures(line) {
             Some(caps) => {
-                let label = &caps["label"];
+                let label = &caps[1];
                 self.labels.insert(label.to_string(), self.n_instructions);
                 return None;
             }
@@ -126,6 +129,11 @@ impl ParseContext {
         }
 
         let (instr, args) = Tokenizer::new(line).tokenize();
+        let get_reg_num = |i: usize| {
+            let mut chars = args[i].chars();
+            chars.next();
+            chars.as_str().parse().unwrap()
+        };
 
         // the thing we're going to return, parse the instruction from the line too and
         // convert it to its opcode
@@ -143,7 +151,7 @@ impl ParseContext {
         // values for every field
         match opcode_to_configuration(res.opcode) {
             Configuration::rd_imm => {
-                res.rd = args[0].parse().unwrap();
+                res.rd = get_reg_num(0);
 
                 // the immediate should be a literal value when the first
                 // character is a digit, otherwise we treat it as a unevaluated
@@ -156,17 +164,17 @@ impl ParseContext {
                 };
             }
             Configuration::rd_r1_r2 => {
-                res.rd = args[0].parse().unwrap();
-                res.rs1 = args[1].parse().unwrap();
-                res.rs2 = args[2].parse().unwrap();
+                res.rd = get_reg_num(0);
+                res.rs1 = get_reg_num(1);
+                res.rs2 = get_reg_num(2);
             }
             Configuration::rd_r1 => {
-                res.rd = args[0].parse().unwrap();
-                res.rs1 = args[1].parse().unwrap();
+                res.rd = get_reg_num(0);
+                res.rs1 = get_reg_num(1);
             }
             Configuration::r1_r2 => {
-                res.rs1 = args[0].parse().unwrap();
-                res.rs2 = args[1].parse().unwrap();
+                res.rs1 = get_reg_num(0);
+                res.rs2 = get_reg_num(1);
             }
         };
 
@@ -188,7 +196,7 @@ impl ParseContext {
                     None => {
                         return Err(ParseError {
                             description: format!("couldn't find label '{}'", labelname),
-                            line_number: instr.line_number
+                            line_number: instr.line_number,
                         });
                     }
                 }

@@ -61,34 +61,32 @@ impl CPU {
         true
     }
     pub fn jumps(&mut self, instr: &Instruction) -> bool {
-        let usereg = match instr.opcode {
-            Opcode::jnzr | Opcode::jzr => true,
-            _ => false,
-        };
-
         let cond = self.regs.get(instr.rs1 as usize);
-        let offset: i64 = if usereg {
-            self.regs.get(instr.rs2 as usize) as i64
-        } else {
-            instr.immediate as i64
-        };
 
-        let matches = match instr.opcode {
+        let (usereg, matches) = match instr.opcode {
             Opcode::call => {
-                let pc = self.get_pc() as u64;
-                self.regs.set(instr.rd as usize, pc);
-                true
+                let pc = self.get_pc();
+                self.regs.set(instr.rd as usize, pc as u64);
+                (false, true)
             }
-            Opcode::jnz | Opcode::jnzr => cond != 0,
-            Opcode::jz | Opcode::jzr => cond == 0,
+            Opcode::jnz => (false, cond != 0),
+            Opcode::jnzr => (true, cond != 0),
+            Opcode::jz => (false, cond == 0),
+            Opcode::jzr => (true, cond == 0),
 
             _ => return false,
         };
 
         if matches {
+            let offset = if usereg {
+                self.regs.get(instr.rs2 as usize) as i64
+            } else {
+                instr.immediate as i64
+            };
             let dest = self.get_pc() as i64 + offset;
             self.regs.set(0, dest as u64);
         }
+
         true
     }
     pub fn loads(&mut self, instr: &Instruction) -> bool {
@@ -143,8 +141,8 @@ impl CPU {
         if !done { done = self.stores(&instr); }
 
         if !done && instr.opcode == Opcode::mv {
-            let val = self.regs.get(instr.rs2 as usize);
-            self.regs.set(instr.rs1 as usize, val);
+            let val = self.regs.get(instr.rs1 as usize);
+            self.regs.set(instr.rd as usize, val);
             done = true;
         }
 
@@ -156,7 +154,6 @@ impl CPU {
     pub fn exec_loop(&mut self) {
         loop {
             let pc = self.get_pc();
-            println!("{}", pc);
             let raw: u64 = self.mem.read_data(pc);
             if raw == END_MARKER {
                 break;
@@ -165,7 +162,7 @@ impl CPU {
             let instr = self.get_instruction();
             self.inc_pc();
             self.execute(instr);
-            self.regs.print();
+            //self.regs.print();
         }
     }
 

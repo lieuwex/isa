@@ -38,27 +38,26 @@ impl CPU {
     }
 
     pub fn arithmatic(&mut self, instr: &Instruction) -> bool {
-        let a: u64 = self.get_reg(instr.rs1 as usize);
-        let b: u64 = self.get_reg(instr.rs2 as usize);
+        let a: i64 = self.get_reg(instr.rs1 as usize) as i64;
+        let b: i64 = self.get_reg(instr.rs2 as usize) as i64;
 
-        let res: u64;
-        match instr.opcode {
-            Opcode::not => res = !a,
-            Opcode::add => res = a + b,
-            Opcode::sub => res = a - b,
-            Opcode::mul => res = a * b,
-            Opcode::div => res = a / b,
-            Opcode::and => res = a & b,
-            Opcode::or => res = a | b,
-            Opcode::xor => res = a ^ b,
-            Opcode::sll => res = a << b,
-            Opcode::slr => res = a >> b,
-            Opcode::sar => res = a >> b, // TODO
+        let res = match instr.opcode {
+            Opcode::not => !a,
+            Opcode::add => a + b,
+            Opcode::sub => a - b,
+            Opcode::mul => a * b,
+            Opcode::div => a / b,
+            Opcode::and => a & b,
+            Opcode::or => a | b,
+            Opcode::xor => a ^ b,
+            Opcode::sll => a << b,
+            Opcode::slr => a >> b,
+            Opcode::sar => a >> b, // TODO
 
             _ => return false,
         };
 
-        self.set_reg(instr.rd as usize, res);
+        self.set_reg(instr.rd as usize, res as u64);
         true
     }
     pub fn jumps(&mut self, instr: &Instruction) -> bool {
@@ -68,58 +67,56 @@ impl CPU {
         };
 
         let cond = self.regs.get(instr.rs1 as usize);
-        let dest: u64 = if usereg {
-            self.regs.get(instr.rs2 as usize)
+        let offset: i64 = if usereg {
+            self.regs.get(instr.rs2 as usize) as i64
         } else {
-            instr.immediate as u64
+            instr.immediate as i64
         };
 
-        let matches;
-        match instr.opcode {
+        let matches = match instr.opcode {
             Opcode::call => {
-                matches = true;
                 let pc = self.get_pc() as u64;
                 self.regs.set(instr.rd as usize, pc);
+                true
             }
-            Opcode::jnz | Opcode::jnzr => matches = cond != 0,
-            Opcode::jz | Opcode::jzr => matches = cond == 0,
+            Opcode::jnz | Opcode::jnzr => cond != 0,
+            Opcode::jz | Opcode::jzr => cond == 0,
 
             _ => return false,
-        }
+        };
 
         if matches {
-            self.regs.set(0, dest);
+            let dest = self.get_pc() as i64 + offset;
+            self.regs.set(0, dest as u64);
         }
         true
     }
     pub fn loads(&mut self, instr: &Instruction) -> bool {
-        let rs1: usize = self.regs.get(instr.rs1 as usize) as usize;
+        let loc: usize = self.regs.get(instr.rs1 as usize) as usize;
 
-        let res: u64;
-        match instr.opcode {
-            Opcode::li => res = instr.immediate as u64,
+        self.regs.set(instr.rd as usize, match instr.opcode {
+            Opcode::li => instr.immediate as u64,
 
             Opcode::l8 => {
-                let raw: u8 = self.mem.read_data(rs1);
-                res = sign_extend(raw as u64, 8)
+                let raw: u8 = self.mem.read_data(loc);
+                sign_extend(raw as u64, 8)
             }
             Opcode::l16 => {
-                let raw: u16 = self.mem.read_data(rs1);
-                res = sign_extend(raw as u64, 16)
+                let raw: u16 = self.mem.read_data(loc);
+                sign_extend(raw as u64, 16)
             },
             Opcode::l32 => {
-                let raw: u32 = self.mem.read_data(rs1);
-                res = sign_extend(raw as u64, 32)
+                let raw: u32 = self.mem.read_data(loc);
+                sign_extend(raw as u64, 32)
             },
             Opcode::l64 => {
-                let raw: u64 = self.mem.read_data(rs1);
-                res = sign_extend(raw, 64)
+                let raw: u64 = self.mem.read_data(loc);
+                sign_extend(raw, 64)
             },
 
             _ => return false,
-        }
+        });
 
-        self.regs.set(instr.rd as usize, res);
         true
     }
     pub fn stores(&mut self, instr: &Instruction) -> bool {

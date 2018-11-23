@@ -190,7 +190,7 @@ impl ParseContext {
             Immediate::LabelRef(ref labelname, labelloc) => {
                 match self.labels.get(labelname.as_str()) {
                     Some(instrloc) => {
-                        immediate = instrloc - labelloc;
+                        immediate = instrloc - labelloc - 8;
                     }
                     None => {
                         return Err(ParseError {

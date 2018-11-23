@@ -3,6 +3,7 @@ use opcode::*;
 use regex::{Regex};
 use std::collections::HashMap;
 use std::fmt;
+use util::*;
 
 #[derive(Debug, Clone)]
 pub struct ParseError {
@@ -129,9 +130,10 @@ impl ParseContext {
 
         let (instr, args) = Tokenizer::new(line).tokenize();
         let get_reg_num = |i: usize| {
-            let mut chars = args[i].chars();
-            chars.next();
-            chars.as_str().parse().unwrap()
+            let n: String = args[i].chars()
+                .skip(1)
+                .collect();
+            parse_number(n).unwrap() as u8
         };
 
         // the thing we're going to return, parse the instruction from the line too and
@@ -145,22 +147,31 @@ impl ParseContext {
             line_number: line_number,
         };
 
+        let n_instr = self.n_instructions;
+        let get_immediate = |n: usize| {
+            // the immediate should be a literal value when the first
+            // character is a digit, otherwise we treat it as a unevaluated
+            // label reference.
+            let r2 = args[n].to_string();
+            let res = if r2.chars().next()?.is_digit(10) {
+                Immediate::Value(parse_number(r2).unwrap())
+            } else {
+                Immediate::LabelRef(r2.to_string(), n_instr)
+            };
+            Ok(res)
+        };
+
         // REVIEW: check if non decimal numbers are supported
         // match the parsed opcode to its configuration, then retrieve the correct
         // values for every field
         match opcode_to_configuration(res.opcode) {
             Configuration::rd_imm => {
                 res.rd = get_reg_num(0);
-
-                // the immediate should be a literal value when the first
-                // character is a digit, otherwise we treat it as a unevaluated
-                // label reference.
-                let r2 = &args[1];
-                res.immediate = if r2.chars().next()?.is_digit(10) {
-                    Immediate::Value(r2.parse().unwrap())
-                } else {
-                    Immediate::LabelRef(r2.to_string(), self.n_instructions)
-                };
+                res.immediate = get_immediate(1)?;
+            }
+            Configuration::r1_imm => {
+                res.rs1 = get_reg_num(0);
+                res.immediate = get_immediate(1)?;
             }
             Configuration::rd_r1_r2 => {
                 res.rd = get_reg_num(0);

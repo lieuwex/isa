@@ -5,6 +5,7 @@ extern crate lazy_static;
 mod instruction;
 mod opcode;
 mod parse;
+mod util;
 
 use parse::*;
 use std::env;
@@ -27,7 +28,7 @@ fn main() -> Result<(), io::Error> {
         match instr {
             Ok(instr) => {
                 let val = instr.encode();
-                let bytes: [u8; 8] = unsafe { transmute(val.to_be()) };
+                let bytes: [u8; 8] = unsafe { transmute(val.to_le()) };
                 stdout.write(&bytes)?;
             }
             Err(s) => {

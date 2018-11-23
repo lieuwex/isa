@@ -100,6 +100,7 @@ pub fn str_to_opcode(s: &str) -> Opcode {
 #[derive(Copy, Clone)]
 pub enum Configuration {
     rd_imm,
+    r1_imm,
     rd_r1_r2,
     rd_r1,
     r1_r2,
@@ -120,21 +121,22 @@ pub fn opcode_to_configuration(opcode: Opcode) -> Configuration {
 
         Opcode::li => Configuration::rd_imm,
         Opcode::call => Configuration::rd_imm,
-        Opcode::jnz => Configuration::rd_imm,
-        Opcode::jz => Configuration::rd_imm,
+
+        Opcode::jnz => Configuration::r1_imm,
+        Opcode::jz => Configuration::r1_imm,
 
         Opcode::s8 => Configuration::r1_r2,
         Opcode::s16 => Configuration::r1_r2,
         Opcode::s32 => Configuration::r1_r2,
         Opcode::s64 => Configuration::r1_r2,
+        Opcode::jnzr => Configuration::r1_r2,
+        Opcode::jzr => Configuration::r1_r2,
 
         Opcode::l8 => Configuration::rd_r1,
         Opcode::l16 => Configuration::rd_r1,
         Opcode::l32 => Configuration::rd_r1,
         Opcode::l64 => Configuration::rd_r1,
         Opcode::not => Configuration::rd_r1,
-        Opcode::jnzr => Configuration::rd_r1,
-        Opcode::jzr => Configuration::rd_r1,
         Opcode::mv => Configuration::rd_r1,
 
         // REVIEW

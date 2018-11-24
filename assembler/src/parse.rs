@@ -31,6 +31,10 @@ struct Tokenizer {
     cursor: usize,
 }
 
+fn is_word_char(c: char) -> bool {
+    c.is_alphanumeric() || c == '_'
+}
+
 impl Tokenizer {
     fn curr(&self) -> char {
         self.chars[self.cursor]
@@ -49,7 +53,7 @@ impl Tokenizer {
     }
     fn get_word(&mut self) -> String {
         let mut res = String::new();
-        while self.inbound() && self.curr().is_alphanumeric() {
+        while self.inbound() && is_word_char(self.curr()) {
             res.push(self.curr());
             self.cursor += 1;
         }

@@ -23,12 +23,12 @@ main:
 	call r15, printstr ; (uses r13), prints the char given on r14, returns to r15
 	j end
 
-xxx:
+printstr_start:
 	s8 r10, r13 ; print char
 	add r14, r14, r1 ; move pointer
 printstr:
 	l8 r13, r14 ; load char
-	jnz r13, xxx ; if char isnt zero -> xxx
+	jnz r13, printstr_start ; if char isnt zero -> xxx
 	mv r0, r15 ; otherwise goto caller
 
 appendchar:

@@ -21,24 +21,20 @@ fn main() -> Result<(), io::Error> {
     let mut stdout = io::stdout();
 
     let s = fs::read_to_string(fname)?;
-    let instrs = parse(&s);
 
-    let err = false;
-    for instr in instrs {
-        match instr {
-            Ok(instr) => {
+    match parse(&s) {
+        Err(s) => {
+            eprintln!("{}", s);
+            exit(1);
+        }
+        Ok(instrs) => {
+            for instr in instrs {
                 let val = instr.encode();
                 let bytes: [u8; 8] = unsafe { transmute(val.to_le()) };
                 stdout.write(&bytes)?;
             }
-            Err(s) => {
-                eprintln!("{}", s);
-            }
         }
     }
 
-    if err {
-        exit(1);
-    }
     Ok(())
 }

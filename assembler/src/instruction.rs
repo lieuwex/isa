@@ -20,3 +20,19 @@ impl Instruction {
         res
     }
 }
+
+#[derive(Debug)]
+pub enum Immediate {
+    Value(i64),
+    LabelRef(String, i64),
+}
+
+#[derive(Debug)]
+pub struct InternalInstruction {
+    pub opcode: InternalOpcode,
+    pub rs1: u8,
+    pub rs2: u8,
+    pub rd: u8,
+    pub immediate: Immediate,
+    pub line_number: usize,
+}

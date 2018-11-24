@@ -1,4 +1,4 @@
-use instruction;
+use instruction::*;
 use opcode::*;
 use regex::{Regex};
 use std::collections::HashMap;
@@ -18,22 +18,6 @@ impl fmt::Display for ParseError {
             self.line_number, self.description
         )
     }
-}
-
-#[derive(Debug)]
-enum Immediate {
-    Value(i64),
-    LabelRef(String, i64),
-}
-
-#[derive(Debug)]
-struct Instruction {
-    opcode: Opcode,
-    rs1: u8,
-    rs2: u8,
-    rd: u8,
-    immediate: Immediate,
-    line_number: usize,
 }
 
 struct ParseContext {
@@ -102,7 +86,7 @@ impl Tokenizer {
 }
 
 impl ParseContext {
-    fn parse_line(&mut self, line: &str, line_number: usize) -> Option<Instruction> {
+    fn parse_line(&mut self, line: &str, line_number: usize) -> Option<InternalInstruction> {
         lazy_static! {
             static ref commentreg: Regex = Regex::new(r";.+$").unwrap();
             static ref labelreg: Regex = Regex::new(r"(?i)^([a-z]\w*):$").unwrap();
@@ -138,8 +122,8 @@ impl ParseContext {
 
         // the thing we're going to return, parse the instruction from the line too and
         // convert it to its opcode
-        let mut res = Instruction {
-            opcode: str_to_opcode(instr.as_str()),
+        let mut res = InternalInstruction {
+            opcode: str_to_internal_opcode(instr.as_str()),
             rd: 0,
             rs1: 0,
             rs2: 0,
@@ -164,7 +148,10 @@ impl ParseContext {
         // REVIEW: check if non decimal numbers are supported
         // match the parsed opcode to its configuration, then retrieve the correct
         // values for every field
-        match opcode_to_configuration(res.opcode) {
+        match res.opcode.configuration() {
+            Configuration::imm => {
+                res.immediate = get_immediate(0)?;
+            }
             Configuration::rd_imm => {
                 res.rd = get_reg_num(0);
                 res.immediate = get_immediate(1)?;
@@ -194,14 +181,13 @@ impl ParseContext {
 
     fn convert_instruction(
         &self,
-        instr: &Instruction,
-    ) -> Result<instruction::Instruction, ParseError> {
-        let immediate;
-        match instr.immediate {
+        instr: &InternalInstruction,
+    ) -> Result<Vec<Instruction>, ParseError> {
+        let immediate = match instr.immediate {
             Immediate::LabelRef(ref labelname, labelloc) => {
                 match self.labels.get(labelname.as_str()) {
                     Some(instrloc) => {
-                        immediate = instrloc - labelloc - 8;
+                        instrloc - labelloc - 8
                     }
                     None => {
                         return Err(ParseError {
@@ -211,28 +197,42 @@ impl ParseContext {
                     }
                 }
             }
-            Immediate::Value(val) => {
-                immediate = val;
-            }
-        }
+            Immediate::Value(val) => val,
+        };
 
-        Ok(instruction::Instruction {
-            opcode: instr.opcode,
-            rs1: instr.rs1,
-            rs2: instr.rs2,
-            rd: instr.rd,
-            immediate: immediate,
-        })
+        let res = match instr.opcode {
+            InternalOpcode::Opaque(OpaqueOpcode::j) => {
+                vec![Instruction {
+                    opcode: Opcode::jnz,
+                    rs1: 0,
+                    rs2: 0,
+                    rd: 0,
+                    immediate: immediate,
+                }]
+            }
+
+            InternalOpcode::Real(opcode) => {
+                vec![Instruction {
+                    opcode: opcode,
+                    rs1: instr.rs1,
+                    rs2: instr.rs2,
+                    rd: instr.rd,
+                    immediate: immediate,
+                }]
+            }
+        };
+
+        Ok(res)
     }
 }
 
-pub fn parse(prog: &str) -> Vec<Result<instruction::Instruction, ParseError>> {
+pub fn parse(prog: &str) -> Result<Vec<Instruction>, ParseError> {
     let mut ctx = ParseContext {
         labels: HashMap::new(),
         n_instructions: 0,
     };
 
-    let parsed: Vec<Instruction> = prog
+    let parsed: Vec<InternalInstruction> = prog
         .lines()
         .enumerate()
         .map(|(i, l)| ctx.parse_line(l, i))
@@ -240,8 +240,10 @@ pub fn parse(prog: &str) -> Vec<Result<instruction::Instruction, ParseError>> {
         .map(|x| x.unwrap())
         .collect();
 
-    parsed
-        .iter()
-        .map(|instr| ctx.convert_instruction(&instr))
-        .collect()
+    let mut res = vec![];
+    for instr in parsed {
+        let mut conv = ctx.convert_instruction(&instr)?;
+        res.append(&mut conv);
+    }
+    Ok(res)
 }

@@ -21,7 +21,7 @@ main:
 	li r14, 10
 
 	call r15, printstr ; (uses r13), prints the char given on r14, returns to r15
-	call r0, end
+	j end
 
 xxx:
 	s8 r10, r13 ; print char

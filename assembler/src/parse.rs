@@ -215,6 +215,25 @@ impl ParseContext {
                 }]
             }
 
+            InternalOpcode::Opaque(OpaqueOpcode::gt) => {
+                vec![Instruction {
+                    opcode: Opcode::lt,
+                    rs1: instr.rs2,
+                    rs2: instr.rs1,
+                    rd: instr.rd,
+                    immediate: 0,
+                }]
+            }
+            InternalOpcode::Opaque(OpaqueOpcode::gte) => {
+                vec![Instruction {
+                    opcode: Opcode::lte,
+                    rs1: instr.rs2,
+                    rs2: instr.rs1,
+                    rd: instr.rd,
+                    immediate: 0,
+                }]
+            }
+
             InternalOpcode::Real(opcode) => {
                 vec![Instruction {
                     opcode: opcode,

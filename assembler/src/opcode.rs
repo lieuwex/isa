@@ -1,7 +1,6 @@
 #[allow(non_camel_case_types)]
 #[derive(Copy, Clone, Debug)]
 pub enum Opcode {
-    unknown,
     li,   // 0b0000000
     mv,   // 0b0000001
     add,  // 0b0000010
@@ -15,19 +14,22 @@ pub enum Opcode {
     sll,  // 0b0001010
     slr,  // 0b0001011
     sar,  // 0b0001100
-    call, // 0b0001101
-    jnz,  // 0b0001110
-    jz,   // 0b0001111
-    jnzr, // 0b0010000
-    jzr,  // 0b0010001
-    l8,   // 0b0010010
-    s8,   // 0b0010011
-    l16,  // 0b0010100
-    s16,  // 0b0010101
-    l32,  // 0b0010110
-    s32,  // 0b0010111
-    l64,  // 0b0011000
-    s64,  // 0b0011001
+    lt,   // 0b0001101
+    lte,  // 0b0001110
+    call, // 0b0001111
+    jnz,  // 0b0010000
+    jz,   // 0b0010001
+    jnzr, // 0b0010010
+    jzr,  // 0b0010011
+    l8,   // 0b0010100
+    s8,   // 0b0010101
+    l16,  // 0b0010110
+    s16,  // 0b0010111
+    l32,  // 0b0011000
+    s32,  // 0b0011001
+    l64,  // 0b0011010
+    s64,  // 0b0011011
+    unknown,
 }
 
 pub fn str_to_opcode(s: &str) -> Opcode {
@@ -45,6 +47,8 @@ pub fn str_to_opcode(s: &str) -> Opcode {
         "sll" => Opcode::sll,
         "slr" => Opcode::slr,
         "sar" => Opcode::sar,
+        "lt" => Opcode::lt,
+        "lte" => Opcode::lte,
         "call" => Opcode::call,
         "jnz" => Opcode::jnz,
         "jz" => Opcode::jz,
@@ -87,6 +91,8 @@ impl Opcode {
             Opcode::sll => Configuration::rd_r1_r2,
             Opcode::slr => Configuration::rd_r1_r2,
             Opcode::sar => Configuration::rd_r1_r2,
+            Opcode::lt => Configuration::rd_r1_r2,
+            Opcode::lte => Configuration::rd_r1_r2,
 
             Opcode::li => Configuration::rd_imm,
             Opcode::call => Configuration::rd_imm,
@@ -118,12 +124,17 @@ impl Opcode {
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum OpaqueOpcode {
     j,
+    gt,
+    gte,
 }
 
 impl OpaqueOpcode {
     fn configuration(&self) -> Configuration {
         match self {
             OpaqueOpcode::j => Configuration::imm,
+
+            OpaqueOpcode::gt => Configuration::rd_r1_r2,
+            OpaqueOpcode::gte => Configuration::rd_r1_r2,
         }
     }
 }
@@ -142,6 +153,8 @@ pub fn str_to_internal_opcode(s: &str) -> InternalOpcode {
 
     match s {
         "j" => InternalOpcode::Opaque(OpaqueOpcode::j),
+        "gt" => InternalOpcode::Opaque(OpaqueOpcode::gt),
+        "gte" => InternalOpcode::Opaque(OpaqueOpcode::gte),
         _ => InternalOpcode::Real(Opcode::unknown),
     }
 }

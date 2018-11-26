@@ -120,12 +120,15 @@ p_stmt(skip) --> [sym(";")].
 p_stmt(return(Expr)) --> [word("return")], p_expr(Expr), [sym(";")].
 p_stmt(asg(Tgt, Expr)) --> p_expr(Tgt), [sym(":=")], p_expr(Expr), [sym(";")].
 p_stmt(while(Expr, Stmts)) --> [word("while")], p_expr(Expr), p_block(Stmts).
+p_stmt(if(Expr, Then, Else)) -->
+	[word("if")], p_expr(Expr), p_block(Then), [word("else")], p_block(Else).
+p_stmt(if(Expr, Then, [])) --> [word("if")], p_expr(Expr), p_block(Then).
 p_stmt(decl(Name, Type)) --> [word(Name)], [sym(":")], p_type(Type), [sym(";")].
 
 oper_table(sym(">"),  1, gt).
 oper_table(sym("<"),  1, lt).
-oper_table(sym(">="), 1, ge).
-oper_table(sym("<="), 1, le).
+oper_table(sym(">="), 1, gte).
+oper_table(sym("<="), 1, lte).
 oper_table(sym("+"),  2, add).
 oper_table(sym("-"),  2, sub).
 oper_table(sym("*"),  3, mul).
@@ -159,6 +162,9 @@ i_stmts([S | Ss], ISs, Dict, Dict2) :-
 	append(ISs1, ISs2, ISs).
 
 i_freshreg(Dict, Dict.put(ctr, Ctr1), reg(Dict.ctr)) :- Ctr1 is Dict.ctr + 1.
+i_newlabel(Dict, Dict.put(ctr, Ctr1), label(Label)) :-
+	N = Dict.ctr, Ctr1 is N + 1,
+	number_string(N, S), string_concat("L", S, Label).
 
 i_stmt(decl(Name, type(int)), [nop], Dict, Dict3) :-
 	i_freshreg(Dict, Dict2, Loc),
@@ -170,6 +176,18 @@ i_stmt(asg(ref(Var), Expr), Inss, Dict, Dict2) :-
 		write(Msg), nl, fail),
 	i_expr(Expr, Inss1, Reg, Dict, Dict2),
 	append(Inss1, [mov(Loc, Reg)], Inss).
+i_stmt(return(Expr), Inss, Dict, Dict2) :-
+	i_expr(Expr, Inss1, Reg, Dict, Dict2),
+	append(Inss1, [ret(Reg)], Inss).
+i_stmt(if(Cond, Then, Else), Inss, Dict, Dict6) :-
+	i_expr(Cond, Inss1, Reg, Dict, Dict2),
+	i_newlabel(Dict2, Dict3, ElseLab),
+	i_newlabel(Dict3, Dict4, AfterLab),
+	i_stmts(Then, Inss2, Dict4, Dict5),
+	i_stmts(Else, Inss3, Dict5, Dict6),
+	append([Inss1, [jcc(z, Reg, ElseLab)], Inss2,
+				[jmp(AfterLab), ElseLab], Inss3, [AfterLab]],
+			Inss).
 
 i_expr(oper(Rator, E1, E2), Inss, Res, Dict, Dict4) :-
 	i_expr(E1, Inss1, R1, Dict, Dict2),
@@ -194,7 +212,7 @@ pretty(ifunc(Name, Args, Ret, Inss)) :-
 	write("}"), nl.
 pretty(type(int)) :- write("int").
 pretty(num(N)) :- write(N).
-pretty(reg(N)) :- write("r"), write(N).
+pretty(reg(R)) :- write("r"), write(R).
 pretty(args([])).
 pretty(args([A])) :- pretty(A), !.
 pretty(args([A | As])) :- pretty(A), write(", "), pretty(args(As)).
@@ -202,15 +220,24 @@ pretty(decl(Name, Type)) :- write(Name), write(" : "), pretty(Type).
 
 pretty_irins(nop) :- write("\tnop"), nl.
 pretty_irins(mov(Rd, R1)) :- write("\tmov "), pretty(Rd), write(", "), pretty(R1), nl.
-pretty_irins(li(Rd, R1)) :- write("\tmov "), pretty(Rd), write(", "), pretty(R1), nl.
+pretty_irins(li(Rd, R1)) :- write("\tli "), pretty(Rd), write(", "), pretty(R1), nl.
 pretty_irins(arith(Rator, Rd, R1, R2)) :-
 	write("\t"), pretty_ir_rator(Rator), write(" "),
 	pretty(Rd), write(", "), pretty(R1), write(", "), pretty(R2), nl.
+pretty_irins(ret(R1)) :- write("\tret "), pretty(R1), nl.
+pretty_irins(jcc(Cc, R1, label(Dest))) :-
+	write("\tj"), write(Cc), write(" "), pretty(R1), write(", "), write(Dest), nl.
+pretty_irins(jmp(label(Dest))) :- write("\tjmp "), write(Dest), nl.
+pretty_irins(label(Label)) :- write(Label), write(":"), nl.
 
 pretty_ir_rator(add) :- write("add").
 pretty_ir_rator(sub) :- write("sub").
 pretty_ir_rator(mul) :- write("mul").
 pretty_ir_rator(div) :- write("div").
+pretty_ir_rator(lt) :- write("lt").
+pretty_ir_rator(gt) :- write("gt").
+pretty_ir_rator(lte) :- write("lte").
+pretty_ir_rator(gte) :- write("gte").
 
 
 

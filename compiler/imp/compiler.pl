@@ -1,6 +1,44 @@
 use_module(library(apply)).
 
 
+% -------------- STRING MAP --------------
+
+sm_make(sm_map{}).
+
+sm_put(Map, Key, Value, Map2) :-
+	is_dict(Map, sm_map),
+	string_codes(Key, Codes), sm_put2(Map, Codes, Value, Map2).
+
+sm_put2(Map, [], Value, Map.put(-1, Value)) :- !.
+sm_put2(Map, [C | Key], Value, Map2) :-
+	Submap = Map.get(C)
+	-> sm_put2(Submap, Key, Value, Submap2),
+	   Map2 = Map.put(C, Submap2)
+	;  sm_put2(_{}, Key, Value, Submap2),
+	   Map2 = Map.put(C, Submap2).
+
+sm_putx(Map, Key, Value, Map2) :-
+	is_dict(Map, sm_map),
+	string_codes(Key, Codes), sm_putx2(Map, Codes, Value, Map2).
+
+sm_putx2(Map, [], Value, Map2) :-
+	!, (_ = Map.get(-1) -> fail; Map2 = Map.put(-1, Value)).
+sm_putx2(Map, [C | Key], Value, Map2) :-
+	Submap = Map.get(C)
+	-> sm_putx2(Submap, Key, Value, Submap2),
+	   Map2 = Map.put(C, Submap2)
+	;  sm_putx2(_{}, Key, Value, Submap2),
+	   Map2 = Map.put(C, Submap2).
+
+sm_get(Map, Key, Value) :-
+	is_dict(Map, sm_map),
+	string_codes(Key, Codes), sm_get2(Map, Codes, Value).
+
+sm_get2(Map, [], Map.get(-1)) :- !.
+sm_get2(Map, [C | Key], Value) :- sm_get2(Map.get(C), Key, Value).
+
+
+
 % -------------- TOKENISER --------------
 
 tokenise(S, T) :- string_codes(S, C), t_tokens(C, TC), maplist(t_string_codes_token, T, TC).
@@ -9,7 +47,12 @@ t_tokens(S, [T | TT]) :- t_whitespace(S, S1), t_token(S1, T, S2), t_tokens(S2, T
 t_tokens(S, []) :- t_whitespace(S, []).
 
 t_whitespace([C | S], R) :- char_type(C, space), t_whitespace(S, R).
+t_whitespace(S, R) :- t_comment(S, S2), t_whitespace(S2, R).
 t_whitespace(S, S).
+
+t_comment([0'# | S], R) :- t_tillnewline(S, [10 | R]).
+t_tillnewline([10 | S], [10 | S]) :- !.
+t_tillnewline([_ | S], R) :- t_tillnewline(S, R).
 
 t_token([C | S], word([C | TT]), Rest) :- t_initwordchar(C), t_wordtail(S, TT, Rest).
 t_token([C | S], num([C | TT]), Rest) :- char_type(C, digit), t_numtail(S, TT, Rest).
@@ -77,6 +120,7 @@ p_stmt(skip) --> [sym(";")].
 p_stmt(return(Expr)) --> [word("return")], p_expr(Expr), [sym(";")].
 p_stmt(asg(Tgt, Expr)) --> p_expr(Tgt), [sym(":=")], p_expr(Expr), [sym(";")].
 p_stmt(while(Expr, Stmts)) --> [word("while")], p_expr(Expr), p_block(Stmts).
+p_stmt(decl(Name, Type)) --> [word(Name)], [sym(":")], p_type(Type), [sym(";")].
 
 oper_table(sym(">"),  1, gt).
 oper_table(sym("<"),  1, lt).
@@ -100,21 +144,74 @@ p_expr_level(Lv, L, E) --> {Lv1 is Lv + 1}, p_expr_level(Lv1, L, E).
 
 % -------------- TO IR --------------
 
-to_ir(Prog, IR) :- i_program(Prog, IR, 1, _).
+to_ir(Prog, IR) :- sm_make(Vars), i_program(Prog, IR, idict{ctr:1, vars:Vars}, _).
 
-i_program(program([]), ir([]), Ctr, Ctr).
-i_program(program([F | Fs]), ir([IF | IFs]), Ctr, Ctr2) :-
-	i_func(F, IF, Ctr, Ctr1), i_program(program(Fs), ir(IFs), Ctr1, Ctr2).
+i_program(program([]), ir([]), Dict, Dict).
+i_program(program([F | Fs]), ir([IF | IFs]), Dict, Dict2) :-
+	i_func(F, IF, Dict, Dict1), i_program(program(Fs), ir(IFs), Dict1, Dict2).
 
-i_func(func(Name, Args, Ret, Body), ifunc(Name, Args, Ret, IB), Ctr, Ctr1) :-
-	i_stmts(Body, IB, Ctr, Ctr1).
+i_func(func(Name, Args, Ret, Body), ifunc(Name, Args, Ret, IB), Dict, Dict1) :-
+	i_stmts(Body, IB, Dict, Dict1).
 
-i_stmts([], [], Ctr, Ctr).
-i_stmts([S | Ss], [IS | ISs], Ctr, Ctr2) :-
-	i_stmt(S, IS, Ctr, Ctr1), i_stmts(Ss, ISs, Ctr1, Ctr2).
+i_stmts([], [], Dict, Dict).
+i_stmts([S | Ss], ISs, Dict, Dict2) :-
+	i_stmt(S, ISs1, Dict, Dict1), i_stmts(Ss, ISs2, Dict1, Dict2),
+	append(ISs1, ISs2, ISs).
 
-i_stmt(asg(ref(Var), Expr), ?, Ctr, ?) :-
-	...
+i_freshreg(Dict, Dict.put(ctr, Ctr1), reg(Dict.ctr)) :- Ctr1 is Dict.ctr + 1.
+
+i_stmt(decl(Name, type(int)), [nop], Dict, Dict3) :-
+	i_freshreg(Dict, Dict2, Loc),
+	sm_putx(Dict2.vars, Name, Loc, Vars),
+	Dict3 = Dict2.put(vars, Vars).
+i_stmt(asg(ref(Var), Expr), Inss, Dict, Dict2) :-
+	(sm_get(Dict.vars, Var, Loc), ! ;
+		string_concat("Undeclared variable ", Var, Msg),
+		write(Msg), nl, fail),
+	i_expr(Expr, Inss1, Reg, Dict, Dict2),
+	append(Inss1, [mov(Loc, Reg)], Inss).
+
+i_expr(oper(Rator, E1, E2), Inss, Res, Dict, Dict4) :-
+	i_expr(E1, Inss1, R1, Dict, Dict2),
+	i_expr(E2, Inss2, R2, Dict2, Dict3),
+	i_freshreg(Dict3, Dict4, Res),
+	append([Inss1, Inss2, [arith(Rator, Res, R1, R2)]], Inss).
+i_expr(num(N), [li(Res, num(N))], Res, Dict, Dict2) :-
+	i_freshreg(Dict, Dict2, Res).
+i_expr(ref(R), [mov(Res, Loc)], Res, Dict, Dict2) :-
+	i_freshreg(Dict, Dict2, Res),
+	sm_get(Dict2.vars, R, Loc).
+
+
+% -------------- PRETTY --------------
+
+pretty(ir(IRFs)) :- maplist(pretty, IRFs).
+pretty(ifunc(Name, Args, Ret, Inss)) :-
+	write("ifunc "), write(Name),
+	write("("), pretty(Args), write(") : "),
+	pretty(Ret), write(" {"), nl,
+	maplist(pretty_irins, Inss),
+	write("}"), nl.
+pretty(type(int)) :- write("int").
+pretty(num(N)) :- write(N).
+pretty(reg(N)) :- write("r"), write(N).
+pretty(args([])).
+pretty(args([A])) :- pretty(A), !.
+pretty(args([A | As])) :- pretty(A), write(", "), pretty(args(As)).
+pretty(decl(Name, Type)) :- write(Name), write(" : "), pretty(Type).
+
+pretty_irins(nop) :- write("\tnop"), nl.
+pretty_irins(mov(Rd, R1)) :- write("\tmov "), pretty(Rd), write(", "), pretty(R1), nl.
+pretty_irins(li(Rd, R1)) :- write("\tmov "), pretty(Rd), write(", "), pretty(R1), nl.
+pretty_irins(arith(Rator, Rd, R1, R2)) :-
+	write("\t"), pretty_ir_rator(Rator), write(" "),
+	pretty(Rd), write(", "), pretty(R1), write(", "), pretty(R2), nl.
+
+pretty_ir_rator(add) :- write("add").
+pretty_ir_rator(sub) :- write("sub").
+pretty_ir_rator(mul) :- write("mul").
+pretty_ir_rator(div) :- write("div").
+
 
 
 % -------------- MAIN --------------
@@ -125,7 +222,9 @@ main :-
 	close(Stream),
 	write(S), nl,
 	tokenise(S, Tokens), !,
+	write(Tokens), nl,
 	phrase(p_program(Prog), Tokens), !,
 	write(Prog), nl,
 	to_ir(Prog, IR), !,
-	write(IR), nl.
+	write(IR), nl,
+	pretty(IR).

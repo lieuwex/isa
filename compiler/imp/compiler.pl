@@ -201,6 +201,49 @@ i_expr(ref(R), [mov(Res, Loc)], Res, Dict, Dict2) :-
 	sm_get(Dict2.vars, R, Loc).
 
 
+% -------------- TO ASM --------------
+
+to_asm(IR, Asm) :- a_program(IR, Asm).
+
+a_program(ir(Fs), Asm) :- maplist(a_func, Fs, Asms), append(Asms, Asm).
+
+a_func(ifunc(Name, _Args, _Ret, Inss), Asm) :-
+	regalloc(Inss, Inss1),
+	maplist(a_instr, Inss1, Inss2),
+	append([label(Name)], Inss2, Asm).
+
+a_instr(nop, mv(reg(1), reg(1))).
+a_instr(li(Reg, num(Num)), li(Reg, num(Num))) :- !, between(-1 << 44, (1 << 44) - 1, Num).
+a_instr(li(_, _), _) :- write("Integer in li out of range"), nl, fail.
+a_instr(mov(reg(Rd), reg(R1)), mv(reg(Rd), reg(R1))).
+a_instr(arith(add, reg(Rd), reg(R1), reg(R2)), add(reg(Rd), reg(R1), reg(R2))).
+a_instr(arith(sub, reg(Rd), reg(R1), reg(R2)), sub(reg(Rd), reg(R1), reg(R2))).
+a_instr(arith(mul, reg(Rd), reg(R1), reg(R2)), mul(reg(Rd), reg(R1), reg(R2))).
+a_instr(arith(div, reg(Rd), reg(R1), reg(R2)), div(reg(Rd), reg(R1), reg(R2))).
+a_instr(arith(lt, reg(Rd), reg(R1), reg(R2)), lt(reg(Rd), reg(R1), reg(R2))).
+a_instr(arith(lte, reg(Rd), reg(R1), reg(R2)), lte(reg(Rd), reg(R1), reg(R2))).
+
+
+% -------------- REGALLOC --------------
+
+regalloc(Inss, Res) :-
+	r_collect(Inss, Regs).
+
+r_collect(Inss, Regs) :-
+	maplist(r_collect_instr, Inss, Reglists),
+	append(Reglists, Regs1),
+	sort(Regs1, Regs2),
+	uniq(Regs2, Regs).
+
+r_collect_instr(nop, []).
+r_collect_instr(li(reg(Rd), _), [Rd]).
+r_collect_instr(mov(reg(Rd), reg(R1), reg(R2)), [Rd, R1, R2]).
+r_collect_instr(arith(_, reg(Rd), reg(R1), reg(R2)), [Rd, R1, R2]).
+r_collect_instr(jcc(_, reg(R1), _), [R1]).
+r_collect_instr(jmp(_), []).
+r_collect_instr(ret(reg(R1)), [R1]).
+
+
 % -------------- PRETTY --------------
 
 pretty(ir(IRFs)) :- maplist(pretty, IRFs).
@@ -240,6 +283,13 @@ pretty_ir_rator(lte) :- write("lte").
 pretty_ir_rator(gte) :- write("gte").
 
 
+% -------------- UTILITIES --------------
+
+uniq([], []).
+uniq([X], [X]).
+uniq([X | [Y | L]], [X | R]) :- X = Y, !, uniq(L, R).
+uniq([X | L], [X | R]) :- uniq(L, R).
+
 
 % -------------- MAIN --------------
 
@@ -254,4 +304,6 @@ main :-
 	write(Prog), nl,
 	to_ir(Prog, IR), !,
 	write(IR), nl,
-	pretty(IR).
+	pretty(IR),
+	to_asm(IR, Asm), !,
+	write(Asm), nl.

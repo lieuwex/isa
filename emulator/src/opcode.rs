@@ -1,7 +1,6 @@
 #[allow(non_camel_case_types)]
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Opcode {
-    unknown,
     li,   // 0b0000000
     mv,   // 0b0000001
     add,  // 0b0000010
@@ -15,20 +14,24 @@ pub enum Opcode {
     sll,  // 0b0001010
     slr,  // 0b0001011
     sar,  // 0b0001100
-    call, // 0b0001101
-    jnz,  // 0b0001110
-    jz,   // 0b0001111
-    jnzr, // 0b0010000
-    jzr,  // 0b0010001
-    l8,   // 0b0010010
-    s8,   // 0b0010011
-    l16,  // 0b0010100
-    s16,  // 0b0010101
-    l32,  // 0b0010110
-    s32,  // 0b0010111
-    l64,  // 0b0011000
-    s64,  // 0b0011001
+    lt,   // 0b0001101
+    lte,  // 0b0001110
+    call, // 0b0001111
+    jnz,  // 0b0010000
+    jz,   // 0b0010001
+    jnzr, // 0b0010010
+    jzr,  // 0b0010011
+    l8,   // 0b0010100
+    s8,   // 0b0010101
+    l16,  // 0b0010110
+    s16,  // 0b0010111
+    l32,  // 0b0011000
+    s32,  // 0b0011001
+    l64,  // 0b0011010
+    s64,  // 0b0011011
+    unknown,
 }
+
 
 pub fn u8_to_opcode(opcode: u8) -> Opcode {
     match opcode {
@@ -45,19 +48,21 @@ pub fn u8_to_opcode(opcode: u8) -> Opcode {
         0b0001010 => Opcode::sll,
         0b0001011 => Opcode::slr,
         0b0001100 => Opcode::sar,
-        0b0001101 => Opcode::call,
-        0b0001110 => Opcode::jnz,
-        0b0001111 => Opcode::jz,
-        0b0010000 => Opcode::jnzr,
-        0b0010001 => Opcode::jzr,
-        0b0010010 => Opcode::l8,
-        0b0010011 => Opcode::s8,
-        0b0010100 => Opcode::l16,
-        0b0010101 => Opcode::s16,
-        0b0010110 => Opcode::l32,
-        0b0010111 => Opcode::s32,
-        0b0011000 => Opcode::l64,
-        0b0011001 => Opcode::s64,
+        0b0001101 => Opcode::lt,
+        0b0001110 => Opcode::lte,
+        0b0001111 => Opcode::call,
+        0b0010000 => Opcode::jnz,
+        0b0010001 => Opcode::jz,
+        0b0010010 => Opcode::jnzr,
+        0b0010011 => Opcode::jzr,
+        0b0010100 => Opcode::l8,
+        0b0010101 => Opcode::s8,
+        0b0010110 => Opcode::l16,
+        0b0010111 => Opcode::s16,
+        0b0011000 => Opcode::l32,
+        0b0011001 => Opcode::s32,
+        0b0011010 => Opcode::l64,
+        0b0011011 => Opcode::s64,
 
         _ => Opcode::unknown,
     }

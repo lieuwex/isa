@@ -41,7 +41,7 @@ impl CPU {
         let a: i64 = self.get_reg(instr.rs1 as usize) as i64;
         let b: i64 = self.get_reg(instr.rs2 as usize) as i64;
 
-        let res = match instr.opcode {
+        let res: i64 = match instr.opcode {
             Opcode::not => !a,
             Opcode::add => a + b,
             Opcode::sub => a - b,
@@ -53,6 +53,8 @@ impl CPU {
             Opcode::sll => a << b,
             Opcode::slr => a >> b,
             Opcode::sar => a >> b, // TODO
+            Opcode::lt => (a < b) as i64,
+            Opcode::lte => (a <= b) as i64,
 
             _ => return false,
         };

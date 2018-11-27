@@ -10,6 +10,8 @@ mul rd,r1,r2
 div rd,r1,r2
 lt rd,r1,r2
 lte rd,r1,r2
+;gt rd,r1,r2 -> lt rd,r2,r1
+;gte rd,r1,r2 -> lte rd,r2,r1
 
 not rd,r1
 and rd,r1,r2

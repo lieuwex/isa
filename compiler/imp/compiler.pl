@@ -227,21 +227,43 @@ a_instr(arith(lte, reg(Rd), reg(R1), reg(R2)), lte(reg(Rd), reg(R1), reg(R2))).
 % -------------- REGALLOC --------------
 
 regalloc(Inss, Res) :-
-	r_collect(Inss, Regs).
+	r_collect(Inss, Regs),
+	write(Regs), nl,
+	r_allocate(Regs, Inss, AllocList),
+	dict_pairs(Alloc, _, AllocList),
+	r_apply(Inss, Alloc, Res).
 
 r_collect(Inss, Regs) :-
-	maplist(r_collect_instr, Inss, Reglists),
+	maplist(r_collecti, Inss, Reglists),
 	append(Reglists, Regs1),
-	sort(Regs1, Regs2),
-	uniq(Regs2, Regs).
+	sort(Regs1, Regs2), uniq(Regs2, Regs).
 
-r_collect_instr(nop, []).
-r_collect_instr(li(reg(Rd), _), [Rd]).
-r_collect_instr(mov(reg(Rd), reg(R1), reg(R2)), [Rd, R1, R2]).
-r_collect_instr(arith(_, reg(Rd), reg(R1), reg(R2)), [Rd, R1, R2]).
-r_collect_instr(jcc(_, reg(R1), _), [R1]).
-r_collect_instr(jmp(_), []).
-r_collect_instr(ret(reg(R1)), [R1]).
+r_collecti(nop, []).
+r_collecti(li(reg(Rd), _), [Rd]).
+r_collecti(mov(reg(Rd), reg(R1)), [Rd, R1]).
+r_collecti(arith(_, reg(Rd), reg(R1), reg(R2)), [Rd, R1, R2]).
+r_collecti(jcc(_, reg(R1), _), [R1]).
+r_collecti(jmp(_), []).
+r_collecti(ret(reg(R1)), [R1]).
+r_collecti(label(_), []).
+
+% TODO: Make this actually do something useful!
+r_allocate([], _, []).
+r_allocate([R | Regs], _, [R-spill | Alloc]) :- r_allocate(Regs, Alloc).
+
+r_apply(Inss, Alloc, Res) :- r_applyL(Inss, Alloc, ResLists), append(ResLists, Res).
+
+r_applyL([], _, []).
+r_applyL([I | Inss], Alloc, [R | Res]) :- r_applyi(I, Alloc, R), r_applyL(Inss, Alloc, Res).
+
+% r_applyi(nop, Alloc, [nop]).
+% r_applyi(li(reg(Rd), reg(R1)), Alloc, [li()]).
+% r_applyi(mov(reg(Rd), reg(R1)), Alloc, [Rd, R1]).
+% r_applyi(arith(Op, reg(Rd), reg(R1), reg(R2)), Alloc, [Rd, R1, R2]).
+% r_applyi(jcc(Cond, reg(R1), Dest), Alloc, [R1]).
+% r_applyi(jmp(Dest), Alloc, []).
+% r_applyi(ret(reg(R1)), Alloc, [R1]).
+% r_applyi(label(Name), Alloc, []).
 
 
 % -------------- PRETTY --------------
@@ -287,7 +309,7 @@ pretty_ir_rator(gte) :- write("gte").
 
 uniq([], []).
 uniq([X], [X]).
-uniq([X | [Y | L]], [X | R]) :- X = Y, !, uniq(L, R).
+uniq([X | [Y | L]], R) :- X = Y, !, uniq([X | L], R).
 uniq([X | L], [X | R]) :- uniq(L, R).
 
 

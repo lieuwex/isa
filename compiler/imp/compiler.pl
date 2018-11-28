@@ -236,7 +236,7 @@ regalloc(Inss, Res) :-
 r_collect(Inss, Regs) :-
 	maplist(r_collecti, Inss, Reglists),
 	append(Reglists, Regs1),
-	sort(Regs1, Regs2), uniq(Regs2, Regs).
+	sort(Regs1, Regs2).  % also removes duplicates
 
 r_collecti(nop, []).
 r_collecti(li(reg(Rd), _), [Rd]).
@@ -305,14 +305,6 @@ pretty_ir_rator(lte) :- write("lte").
 pretty_ir_rator(gte) :- write("gte").
 
 
-% -------------- UTILITIES --------------
-
-uniq([], []).
-uniq([X], [X]).
-uniq([X | [Y | L]], R) :- X = Y, !, uniq([X | L], R).
-uniq([X | L], [X | R]) :- uniq(L, R).
-
-
 % -------------- MAIN --------------
 
 main :-
@@ -329,3 +321,6 @@ main :-
 	pretty(IR),
 	to_asm(IR, Asm), !,
 	write(Asm), nl.
+
+
+% vim: set ft=prolog:

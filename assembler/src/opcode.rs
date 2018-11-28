@@ -139,7 +139,7 @@ impl OpaqueOpcode {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum InternalOpcode {
     Real(Opcode),
     Opaque(OpaqueOpcode),

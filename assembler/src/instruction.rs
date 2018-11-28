@@ -1,6 +1,6 @@
 use opcode::*;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct Instruction {
     pub opcode: Opcode,
     pub rs1: u8,
@@ -21,13 +21,13 @@ impl Instruction {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Immediate {
     Value(i64),
     LabelRef(String, i64),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct InternalInstruction {
     pub opcode: InternalOpcode,
     pub rs1: u8,

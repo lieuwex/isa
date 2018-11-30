@@ -1,6 +1,6 @@
 % regalloc(++Instrs, +Regs, -Mapping).
 %
-% Instrs: list of terms, where the terms are of the form _(Read, Written,
+% Instrs: list of terms, where the terms are of the form instr(Read, Written,
 %   Nexts). Each such term represents an instruction in a program. Read is a
 %   list of integers indicating the registers read by the instruction, and
 %   Written similarly indicates the registers written. Nexts is a list of

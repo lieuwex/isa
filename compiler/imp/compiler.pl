@@ -1,4 +1,5 @@
 use_module(library(apply)).
+use_module(library(assoc)).
 
 
 % -------------- STRING MAP --------------
@@ -208,62 +209,74 @@ to_asm(IR, Asm) :- a_program(IR, Asm).
 a_program(ir(Fs), Asm) :- maplist(a_func, Fs, Asms), append(Asms, Asm).
 
 a_func(ifunc(Name, _Args, _Ret, Inss), Asm) :-
-	regalloc(Inss, Inss1),
-	maplist(a_instr, Inss1, Inss2),
-	append([label(Name)], Inss2, Asm).
+	a_collect_regs(Inss, Regs),
+	length(Regs, NumRegs),
+	StackSpace is 8 * NumRegs,
+	a_assign_stack_spots(Regs, 0, Assign),
+	trace,
+	maplist(a_instr, Assign, Inss, InssLists),
+	append(InssLists, Inss1),
+	append([
+				[label(Name)],
+				% Store the link register
+				[li(reg(5), num(8)), sub(reg(15), reg(15), reg(5)), s64(reg(15), reg(14))],
+				% Reserve space for the IR registers
+				[li(reg(5), num(StackSpace)), sub(reg(15), reg(15), reg(5))],
+				% Run the body
+				Inss1,
+				% Free the IR registers stack space
+				[li(reg(5), num(StackSpace)), add(reg(15), reg(15), reg(5))],
+				% Restore the link register
+				[l64(reg(14), reg(15)), li(reg(5), num(8)), add(reg(15), reg(15), reg(5))],
+				% Return
+				[mv(reg(0), reg(14))]],
+			Asm).
 
-a_instr(nop, mv(reg(1), reg(1))).
-a_instr(li(Reg, num(Num)), li(Reg, num(Num))) :- !, between(-1 << 44, (1 << 44) - 1, Num).
-a_instr(li(_, _), _) :- write("Integer in li out of range"), nl, fail.
-a_instr(mov(reg(Rd), reg(R1)), mv(reg(Rd), reg(R1))).
-a_instr(arith(add, reg(Rd), reg(R1), reg(R2)), add(reg(Rd), reg(R1), reg(R2))).
-a_instr(arith(sub, reg(Rd), reg(R1), reg(R2)), sub(reg(Rd), reg(R1), reg(R2))).
-a_instr(arith(mul, reg(Rd), reg(R1), reg(R2)), mul(reg(Rd), reg(R1), reg(R2))).
-a_instr(arith(div, reg(Rd), reg(R1), reg(R2)), div(reg(Rd), reg(R1), reg(R2))).
-a_instr(arith(lt, reg(Rd), reg(R1), reg(R2)), lt(reg(Rd), reg(R1), reg(R2))).
-a_instr(arith(lte, reg(Rd), reg(R1), reg(R2)), lte(reg(Rd), reg(R1), reg(R2))).
+a_assign_stack_spots([], _, Assoc) :- empty_assoc(Assoc).
+a_assign_stack_spots([Reg | Regs], Idx, Assoc) :-
+	Idx1 is Idx + 1,
+	a_assign_stack_spots(Regs, Idx1, Assoc1),
+	put_assoc(Reg, Assoc1, Idx, Assoc).
 
+a_instr(_Assign, nop, []).
+a_instr(Assign, li(reg(R), num(Num)), Res) :-
+	between(-1 << 44, (1 << 44) - 1, Num), !,
+	I1 = [li(reg(1), num(Num))],
+	a_i_store(Assign, R, 1, I2),
+	append([I1, I2], Res).
+a_instr(_Assign, li(_, _), _) :-
+	write("Integer in li out of range"), nl, fail.
+a_instr(Assign, mov(reg(Rd), reg(R1)), Res) :-
+	a_i_load(Assign, 1, R1, I1),
+	a_i_store(Assign, Rd, 1, I2),
+	append([I1, I2], Res).
+a_instr(Assign, arith(Rator, reg(Rd), reg(R1), reg(R2)), Res) :-
+	a_i_load(Assign, 1, R1, I1),
+	a_i_load(Assign, 2, R2, I2),
+	a_i_arith(Rator, reg(1), reg(1), reg(2), I3),
+	a_i_store(Assign, Rd, 1, I4),
+	append([I1, I2, I3, I4], Res).
 
-% -------------- REGALLOC --------------
+a_i_arith(add, Rd, R1, R2, [add(Rd, R1, R2)]).
+a_i_arith(sub, Rd, R1, R2, [sub(Rd, R1, R2)]).
+a_i_arith(mul, Rd, R1, R2, [mul(Rd, R1, R2)]).
+a_i_arith(div, Rd, R1, R2, [div(Rd, R1, R2)]).
+a_i_arith(lt, Rd, R1, R2, [lt(Rd, R1, R2)]).
+a_i_arith(lte, Rd, R1, R2, [lte(Rd, R1, R2)]).
 
-regalloc(Inss, Res) :-
-	r_collect(Inss, Regs),
-	write(Regs), nl,
-	r_allocate(Regs, Inss, AllocList),
-	dict_pairs(Alloc, _, AllocList),
-	r_apply(Inss, Alloc, Res).
+a_i_store(Assign, IR, HR, [sub(reg(5), reg(15), Offset), s64(reg(5), reg(HR))]) :- get_assoc(IR, Assign, Offset).
+a_i_load(Assign, HR, IR, [sub(reg(5), reg(15), Offset), l64(reg(HR), reg(5))]) :- get_assoc(IR, Assign, Offset).
 
-r_collect(Inss, Regs) :-
-	maplist(r_collecti, Inss, Reglists),
-	append(Reglists, Regs1),
-	sort(Regs1, Regs2).  % also removes duplicates
+a_collect_regs(Inss, Regs) :- maplist(a_collect_regs_i, Inss, RegsLists), append(RegsLists, Regs).
+a_collect_regs_i(nop, []).
+a_collect_regs_i(li(reg(Rd), _), [Rd]).
+a_collect_regs_i(mov(reg(Rd), reg(R1)), [Rd, R1]).
+a_collect_regs_i(arith(_, reg(Rd), reg(R1), reg(R2)), [Rd, R1, R2]).
+a_collect_regs_i(jcc(_, reg(R1), _), [R1]).
+a_collect_regs_i(jmp(_), []).
+a_collect_regs_i(ret(reg(R1)), [R1]).
+a_collect_regs_i(label(_), []).
 
-r_collecti(nop, []).
-r_collecti(li(reg(Rd), _), [Rd]).
-r_collecti(mov(reg(Rd), reg(R1)), [Rd, R1]).
-r_collecti(arith(_, reg(Rd), reg(R1), reg(R2)), [Rd, R1, R2]).
-r_collecti(jcc(_, reg(R1), _), [R1]).
-r_collecti(jmp(_), []).
-r_collecti(ret(reg(R1)), [R1]).
-r_collecti(label(_), []).
-
-% TODO: Make this actually do something useful!
-r_allocate([], _, []).
-r_allocate([R | Regs], _, [R-spill | Alloc]) :- r_allocate(Regs, Alloc).
-
-r_apply(Inss, Alloc, Res) :- r_applyL(Inss, Alloc, ResLists), append(ResLists, Res).
-
-r_applyL([], _, []).
-r_applyL([I | Inss], Alloc, [R | Res]) :- r_applyi(I, Alloc, R), r_applyL(Inss, Alloc, Res).
-
-% r_applyi(nop, Alloc, [nop]).
-% r_applyi(li(reg(Rd), reg(R1)), Alloc, [li()]).
-% r_applyi(mov(reg(Rd), reg(R1)), Alloc, [Rd, R1]).
-% r_applyi(arith(Op, reg(Rd), reg(R1), reg(R2)), Alloc, [Rd, R1, R2]).
-% r_applyi(jcc(Cond, reg(R1), Dest), Alloc, [R1]).
-% r_applyi(jmp(Dest), Alloc, []).
-% r_applyi(ret(reg(R1)), Alloc, [R1]).
-% r_applyi(label(Name), Alloc, []).
 
 
 % -------------- PRETTY --------------

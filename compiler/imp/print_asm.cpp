@@ -81,7 +81,7 @@ static void printASM(ostream &os, const IRIns &ins) {
 static void printASM(ostream &os, const IRTerm &term, const string &lblPrefix) {
 	switch (term.tag) {
 		case IRTerm::JMP:
-			os << "jz r0, BB" << lblPrefix << term.id << endl;
+			os << "jnz r0, BB" << lblPrefix << term.id << endl;
 			break;
 
 		case IRTerm::JZ:
@@ -121,8 +121,22 @@ static void printASM(ostream &os, const IFunc &ifunc) {
 	}
 }
 
+static void printPrologue(ostream &os) {
+	os << "\tli r15, 4000" << endl;
+	os << "\tcall r14, main" << endl;
+	os << "\tjnz r0, exit" << endl;
+	os << endl;
+}
+
+static void printEpilogue(ostream &os) {
+	os << endl;
+	os << "exit:" << endl;
+}
+
 void printASM(ostream &os, const IR &ir) {
+	printPrologue(os);
 	for (const auto &p : ir.funcs) {
 		printASM(os, p.second);
 	}
+	printEpilogue(os);
 }

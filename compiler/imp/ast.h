@@ -68,6 +68,7 @@ public:
 		WHILE,   // expr, ch[0]
 		DO,      // ch
 		CALL,    // decl, name, args
+		RETURN,  // expr
 	};
 
 	int tag;

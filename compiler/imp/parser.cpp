@@ -223,6 +223,10 @@ static Stmt parseStmt(const SExpr &sexpr) {
 			}
 			stmt.args.emplace_back(parseExpr(s.list[0]), parseType(s.list[1]));
 		}
+	} else if (sexpr.matchList({SExpr("return")})) {
+		if (sexpr.list.size() != 2) throw runtime_error("Invalid return");
+		stmt.tag = Stmt::RETURN;
+		stmt.expr = parseExpr(sexpr.list[1]);
 	} else {
 		throw runtime_error("Invalid statement");
 	}

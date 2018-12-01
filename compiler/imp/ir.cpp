@@ -342,6 +342,7 @@ private:
 	void buildWhile(const Stmt &stmt, Id endbb);
 	void buildDo(const Stmt &stmt, Id endbb);
 	void buildCall(const Stmt &stmt, Id endbb);
+	void buildReturn(const Stmt &stmt, Id endbb);
 
 	vector<unordered_map<string, Loc>> stk;
 
@@ -431,6 +432,7 @@ void Build::build(const Stmt &stmt, Id endbb) {
 		case Stmt::WHILE: buildWhile(stmt, endbb); break;
 		case Stmt::DO: buildDo(stmt, endbb); break;
 		case Stmt::CALL: buildCall(stmt, endbb); break;
+		case Stmt::RETURN: buildReturn(stmt, endbb); break;
 		default: assert(false);
 	}
 }
@@ -524,6 +526,15 @@ void Build::buildCall(const Stmt &stmt, Id endbb) {
 
 	B.add(IRIns::mov(loc, Loc::reg(RRET)));
 	B.setTerm(IRTerm::jmp(endbb));
+}
+
+void Build::buildReturn(const Stmt &stmt, Id) {
+	Id bb1 = B.newBB();
+	Loc loc = build(stmt.expr, bb1);
+
+	B.switchBB(bb1);
+	B.add(IRIns::mov(Loc::reg(RRET), loc));
+	B.setTerm(IRTerm::ret());
 }
 
 Loc Build::build(const Expr &expr, Id endbb) {

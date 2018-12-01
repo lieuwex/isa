@@ -1,4 +1,6 @@
 #include "print_asm.h"
+#include "prologue.asm.h"
+#include "epilogue.asm.h"
 
 using namespace std;
 
@@ -122,15 +124,11 @@ static void printASM(ostream &os, const IFunc &ifunc) {
 }
 
 static void printPrologue(ostream &os) {
-	os << "\tli r15, 4000" << endl;
-	os << "\tcall r14, main" << endl;
-	os << "\tjnz r0, exit" << endl;
-	os << endl;
+	os.write((const char*)prologue_asm, prologue_asm_len);
 }
 
 static void printEpilogue(ostream &os) {
-	os << endl;
-	os << "exit:" << endl;
+	os.write((const char*)epilogue_asm, epilogue_asm_len);
 }
 
 void printASM(ostream &os, const IR &ir) {

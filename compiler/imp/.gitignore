@@ -1,4 +1,7 @@
 test.simp
 test.asm
+test.bin
 *.o
 imp
+prologue.asm.cpp
+epilogue.asm.cpp

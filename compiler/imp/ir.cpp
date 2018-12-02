@@ -374,40 +374,6 @@ void Build::setLoc(const string &name, Loc loc) {
 
 void Build::build(const Function &function) {
 	pushScope();
-	/*
-	Loc reg8 = B.genReg();
-	B.add(IRIns::li(reg8, 8));
-	B.add(IRIns::arith(Arith::SUB, Loc::reg(RSP), Loc::reg(RSP), reg8));
-	B.add(IRIns::store(Loc::reg(RSP), Loc::reg(RLINK), 8));
-
-	if (function.args.size() > 0) {
-		INT offset = 8;
-		for (size_t i = 0; i < function.args.size(); i++) {
-			const Decl &decl = function.args[i];
-
-			Loc offreg = B.genReg();
-			Loc ptrreg = B.genReg();
-			Loc reg = B.genReg();
-			B.add(IRIns::li(offreg, offset));
-			B.add(IRIns::arith(Arith::ADD, ptrreg, Loc::reg(RSP), offreg));
-			B.add(IRIns::load(reg, ptrreg, decl.type.size()));
-
-			setLoc(decl.name, reg);
-
-			offset += decl.type.size();
-		}
-	}
-
-	int bb1 = B.newBB();
-	build(function.body, bb1);
-
-	B.switchBB(bb1);
-	B.add(IRIns::load(Loc::reg(RLINK), Loc::reg(RSP), 8));
-	reg8 = B.genReg();
-	B.add(IRIns::li(reg8, 8));
-	B.add(IRIns::arith(Arith::ADD, Loc::reg(RSP), Loc::reg(RSP), reg8));
-	B.setTerm(IRTerm::ret());
-	*/
 
 	for (size_t i = 0; i < function.args.size(); i++) {
 		Loc reg = B.genReg();

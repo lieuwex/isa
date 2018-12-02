@@ -413,9 +413,12 @@ void Build::buildAssign(const Stmt &stmt, Id endbb) {
 	Loc loc = lookup(stmt.decl.name);
 	if (loc.tag == -1) throw runtime_error("Assignment to undeclared variable");
 
-	Loc eloc = build(stmt.expr, endbb);
-	B.switchBB(endbb);
+	Id bb1 = B.newBB();
+	Loc eloc = build(stmt.expr, bb1);
+
+	B.switchBB(bb1);
 	B.add(IRIns::mov(loc, eloc));
+	B.setTerm(IRTerm::jmp(endbb));
 }
 
 void Build::buildIf(const Stmt &stmt, Id endbb) {

@@ -150,6 +150,21 @@ static void fill_genkill(
 	}
 }
 
+template <typename T>
+__attribute__((unused))
+ostream& operator<<(ostream &os, const set<T> &s) {
+	os << '{';
+
+	bool first = true;
+	for (const T &t : s) {
+		if (first) first = false;
+		else os << ',';
+		os << t;
+	}
+
+	return os << '}';
+}
+
 unordered_map<Loc, Interval> live_analysis(
 		const IFunc &ifunc, const vector<Id> &bbOrder) {
 
@@ -172,17 +187,31 @@ unordered_map<Loc, Interval> live_analysis(
 			ivs[loc].include(index + bb.inss.size());
 		}
 
+		// cerr << "LA: BB " << bb.id << endl;
+		// cerr << "LA:   liveOut=" << live << endl;
+
+		for (const Loc &loc : onlyIRRegs(bb.term.read())) {
+			ivs[loc].include(index + bb.inss.size());
+			live.insert(loc);
+			// cerr << "LA:   read insert " << loc << endl;
+		}
+
 		for (int j = bb.inss.size() - 1; j >= 0; j--) {
 			for (const Loc &loc : onlyIRRegs(bb.inss[j].written())) {
 				if (live.count(loc) > 0) ivs[loc].include(index + j);
 				live.erase(loc);
+				// cerr << "LA:   write erase " << loc << endl;
 			}
 
 			for (const Loc &loc : onlyIRRegs(bb.inss[j].read())) {
 				ivs[loc].include(index + j);
 				live.insert(loc);
+				// cerr << "LA:   read insert " << loc << endl;
 			}
 		}
+
+		// cerr << "LA:   live   =" << live << endl;
+		// cerr << "LA:   liveIn =" << blocks[i].liveIn << endl;
 
 		assert(live == blocks[i].liveIn);
 		for (const Loc &loc : live) ivs[loc].include(index);

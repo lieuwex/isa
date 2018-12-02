@@ -67,7 +67,8 @@ public:
 		IF,      // expr, ch[0], ch[1]
 		WHILE,   // expr, ch[0]
 		DO,      // ch
-		CALL,    // decl, name, args
+		CALL,    // name, args
+		CALLR,   // decl, name, args
 		RETURN,  // expr
 	};
 

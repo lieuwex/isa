@@ -208,12 +208,27 @@ static Stmt parseStmt(const SExpr &sexpr) {
 			stmt.ch.push_back(parseStmt(sexpr.list[i]));
 		}
 	} else if (sexpr.matchList({SExpr("call")})) {
+		if (sexpr.list.size() != 3 ||
+				sexpr.list[1].tag != SExpr::WORD ||
+				sexpr.list[2].tag != SExpr::LIST) {
+			throw runtime_error("Invalid call");
+		}
+		stmt.tag = Stmt::CALL;
+		stmt.name = sexpr.list[1].word;
+		for (const SExpr &s : sexpr.list[2].list) {
+			if (s.tag != SExpr::LIST ||
+					s.list.size() != 2) {
+				throw runtime_error("Invalid call arg");
+			}
+			stmt.args.emplace_back(parseExpr(s.list[0]), parseType(s.list[1]));
+		}
+	} else if (sexpr.matchList({SExpr("callr")})) {
 		if (sexpr.list.size() != 4 ||
 				sexpr.list[2].tag != SExpr::WORD ||
 				sexpr.list[3].tag != SExpr::LIST) {
 			throw runtime_error("Invalid call");
 		}
-		stmt.tag = Stmt::CALL;
+		stmt.tag = Stmt::CALLR;
 		stmt.decl = parseDecl(sexpr.list[1]);
 		stmt.name = sexpr.list[2].word;
 		for (const SExpr &s : sexpr.list[3].list) {

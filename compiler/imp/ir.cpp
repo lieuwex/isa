@@ -341,7 +341,7 @@ private:
 	void buildIf(const Stmt &stmt, Id endbb);
 	void buildWhile(const Stmt &stmt, Id endbb);
 	void buildDo(const Stmt &stmt, Id endbb);
-	void buildCall(const Stmt &stmt, Id endbb);
+	void buildCall(const Stmt &stmt, Id endbb, bool hasRet);
 	void buildReturn(const Stmt &stmt, Id endbb);
 
 	vector<unordered_map<string, Loc>> stk;
@@ -397,7 +397,8 @@ void Build::build(const Stmt &stmt, Id endbb) {
 		case Stmt::IF: buildIf(stmt, endbb); break;
 		case Stmt::WHILE: buildWhile(stmt, endbb); break;
 		case Stmt::DO: buildDo(stmt, endbb); break;
-		case Stmt::CALL: buildCall(stmt, endbb); break;
+		case Stmt::CALL: buildCall(stmt, endbb, false); break;
+		case Stmt::CALLR: buildCall(stmt, endbb, true); break;
 		case Stmt::RETURN: buildReturn(stmt, endbb); break;
 		default: assert(false);
 	}
@@ -463,7 +464,7 @@ void Build::buildDo(const Stmt &stmt, Id endbb) {
 	popScope();
 }
 
-void Build::buildCall(const Stmt &stmt, Id endbb) {
+void Build::buildCall(const Stmt &stmt, Id endbb, bool hasRet) {
 	INT sizesum = 0;
 	for (int i = stmt.args.size() - 1; i >= 0; i--) {
 		const Expr &expr = stmt.args[i].first;
@@ -487,10 +488,13 @@ void Build::buildCall(const Stmt &stmt, Id endbb) {
 	B.add(IRIns::li(sizereg, sizesum));
 	B.add(IRIns::arith(Arith::ADD, Loc::reg(RSP), Loc::reg(RSP), sizereg));
 
-	Loc loc = lookup(stmt.decl.name);
-	if (loc.tag == -1) throw runtime_error("Call asg to undefined variable");
+	if (hasRet) {
+		Loc loc = lookup(stmt.decl.name);
+		if (loc.tag == -1) throw runtime_error("Call asg to undefined variable");
 
-	B.add(IRIns::mov(loc, Loc::reg(RRET)));
+		B.add(IRIns::mov(loc, Loc::reg(RRET)));
+	}
+
 	B.setTerm(IRTerm::jmp(endbb));
 }
 

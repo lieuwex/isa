@@ -1,0 +1,9 @@
+(imp
+  (func main () int
+        (do
+          (decl (x int) 97)
+          (while (< x (+ 97 26))
+                 (do
+                   (call putchar ((x int)))
+                   (asg (x int) (+ x 1))))
+          (call putchar ((10 int))))))

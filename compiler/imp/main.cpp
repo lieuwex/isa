@@ -3,6 +3,7 @@
 #include "ast.h"
 #include "parser.h"
 #include "ir.h"
+#include "optimiser.h"
 #include "ir_order.h"
 #include "live_analysis.h"
 #include "regalloc.h"
@@ -36,6 +37,9 @@ int main(int argc, char **argv) {
 	Program program = parseProgram(SExpr::parse(source));
 
 	IR ir = buildIR(program);
+	cerr << ir << endl;
+
+	optimise(ir);
 	cerr << ir << endl;
 
 	for (auto &p : ir.funcs) {

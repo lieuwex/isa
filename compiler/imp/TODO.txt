@@ -1,0 +1,1 @@
+Optimiser crashes. Run 'valgrind ./imp loop.simp', and observe the segfault.

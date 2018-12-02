@@ -6,7 +6,6 @@ putchar:
 	li r13, 8
 	sub r15, r15, r13
 	s64 r15, r1
-	li r13, 8
 	add r1, r15, r13
 	l8 r1, r1
 	li r13, 80

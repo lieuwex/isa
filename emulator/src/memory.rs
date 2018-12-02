@@ -1,5 +1,4 @@
 use std::mem;
-use std::fmt;
 
 pub struct Memory {
     data: Vec<u8>,

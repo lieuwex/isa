@@ -1,3 +1,4 @@
+#include <cassert>
 #include "ir_builder.h"
 
 using namespace std;

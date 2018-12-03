@@ -1,3 +1,4 @@
+#include <cassert>
 #include "print_asm.h"
 #include "prologue.asm.h"
 #include "epilogue.asm.h"

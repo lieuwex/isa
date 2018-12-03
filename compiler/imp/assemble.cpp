@@ -1,3 +1,4 @@
+#include <cassert>
 #include "assemble.h"
 
 using namespace std;

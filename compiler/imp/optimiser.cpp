@@ -1,6 +1,7 @@
 #include <queue>
 #include <unordered_set>
 #include <unordered_map>
+#include <cassert>
 #include "optimiser.h"
 
 using namespace std;

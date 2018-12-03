@@ -26,7 +26,7 @@ static INT svtoI(string_view &s) {
 	string str(s.begin(), s.begin() + idx);
 	s.remove_prefix(idx);
 
-	return stoll(str);
+	return (neg ? -1 : 1) * stoll(str);
 }
 
 static SExpr goParse(string_view &s) {

@@ -80,8 +80,34 @@ static void mergeBlocks(IFunc &ifunc) {
 	}
 }
 
+static void deadCode(IFunc &ifunc) {
+	unordered_set<Id> reachable;
+	queue<Id> q;
+	q.push(0);
+	while (q.size() > 0) {
+		Id id = q.front(); q.pop();
+		reachable.insert(id);
+
+		for (Id n : ifunc.BBs[id].term.nexts()) {
+			q.push(n);
+		}
+	}
+
+	vector<Id> unreachable;
+	for (const auto &p : ifunc.BBs) {
+		if (reachable.count(p.first) == 0) {
+			unreachable.push_back(p.first);
+		}
+	}
+
+	for (Id id : unreachable) {
+		ifunc.BBs.erase(ifunc.BBs.find(id));
+	}
+}
+
 static void optimise(IFunc &ifunc) {
 	mergeBlocks(ifunc);
+	deadCode(ifunc);
 }
 
 void optimise(IR &ir) {

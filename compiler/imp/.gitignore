@@ -1,6 +1,4 @@
-test.simp
-test.asm
-test.bin
+*.bin
 *.o
 *.dSYM
 imp

@@ -51,7 +51,6 @@ static void mergeBlocks(IFunc &ifunc) {
 	unordered_set<Id> seen;
 	for (Id bid : sources) {
 		if (seen.count(bid) != 0) continue;
-		seen.insert(bid);
 
 		cerr << "source: " << bid << endl;
 
@@ -62,22 +61,19 @@ static void mergeBlocks(IFunc &ifunc) {
 			bid = it->second;
 		}
 
-		vector<Id> chain = {bid};
-		Id bid2 = ifunc.BBs[bid].term.id;
+		vector<Id> chain;
 
-		while (prevCount.find(bid2)->second == 1) {
-			cerr << "  bid2=" << bid2 << endl;
-			chain.push_back(bid2);
-			seen.insert(bid2);
+		while (true) {
+			chain.push_back(bid);
+			seen.insert(bid);
 
-			if (jmpNexts.count(bid2) == 0) break;
-
-			bid2 = ifunc.BBs[bid2].term.id;
+			auto it = singleNexts.find(bid);
+			if (it == singleNexts.end()) break;
+			if (singlePrevs.find(it->second) == singlePrevs.end()) break;
+			bid = it->second;
 		}
 
 		if (chain.size() == 1) continue;
-
-		if (jmpNexts.count(bid2) != 0) sources.push(bid2);
 
 		mergeChain(ifunc, chain);
 	}

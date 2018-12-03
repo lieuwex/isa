@@ -127,11 +127,16 @@ ostream& operator<<(ostream &os, const SExpr &s) {
 
 static Type parseType(const SExpr &sexpr) {
 	if (sexpr.tag == SExpr::WORD) {
-		if (sexpr.word != "int") throw runtime_error("Unknown type");
-		return Type(Type::INT);
-	} else {
-		throw runtime_error("Unsupported type?");
+		if (sexpr.word == "int") return Type::makeInt();
+		else if (sexpr.word == "i8") return Type::makeIntSized(8);
+		else if (sexpr.word == "i16") return Type::makeIntSized(16);
+		else if (sexpr.word == "i32") return Type::makeIntSized(32);
+		else if (sexpr.word == "i64") return Type::makeIntSized(64);
+	} else if (sexpr.matchList({SExpr("array")})) {
+		if (sexpr.list.size() != 2) throw runtime_error("Invalid array type");
+		return Type::makeArray(parseType(sexpr.list[1]));
 	}
+	throw runtime_error("Unknown type");
 }
 
 static Decl parseDecl(const SExpr &sexpr) {
@@ -187,9 +192,11 @@ static Stmt parseStmt(const SExpr &sexpr) {
 		stmt.decl = parseDecl(sexpr.list[1]);
 		stmt.expr = parseExpr(sexpr.list[2]);
 	} else if (sexpr.matchList({SExpr("asg")})) {
-		if (sexpr.list.size() != 3) throw runtime_error("Invalid assignment");
+		if (sexpr.list.size() != 3 || sexpr.list[1].tag != SExpr::WORD) {
+			throw runtime_error("Invalid assignment");
+		}
 		stmt.tag = Stmt::ASSIGN;
-		stmt.decl = parseDecl(sexpr.list[1]);
+		stmt.target = sexpr.list[1].word;
 		stmt.expr = parseExpr(sexpr.list[2]);
 	} else if (sexpr.matchList({SExpr("if")})) {
 		if (sexpr.list.size() != 4) throw runtime_error("Invalid if");
@@ -216,27 +223,20 @@ static Stmt parseStmt(const SExpr &sexpr) {
 		stmt.tag = Stmt::CALL;
 		stmt.name = sexpr.list[1].word;
 		for (const SExpr &s : sexpr.list[2].list) {
-			if (s.tag != SExpr::LIST ||
-					s.list.size() != 2) {
-				throw runtime_error("Invalid call arg");
-			}
-			stmt.args.emplace_back(parseExpr(s.list[0]), parseType(s.list[1]));
+			stmt.args.push_back(parseExpr(s));
 		}
 	} else if (sexpr.matchList({SExpr("callr")})) {
 		if (sexpr.list.size() != 4 ||
+				sexpr.list[1].tag != SExpr::WORD ||
 				sexpr.list[2].tag != SExpr::WORD ||
 				sexpr.list[3].tag != SExpr::LIST) {
 			throw runtime_error("Invalid call");
 		}
 		stmt.tag = Stmt::CALLR;
-		stmt.decl = parseDecl(sexpr.list[1]);
+		stmt.target = sexpr.list[1].word;
 		stmt.name = sexpr.list[2].word;
 		for (const SExpr &s : sexpr.list[3].list) {
-			if (s.tag != SExpr::LIST ||
-					s.list.size() != 2) {
-				throw runtime_error("Invalid call arg");
-			}
-			stmt.args.emplace_back(parseExpr(s.list[0]), parseType(s.list[1]));
+			stmt.args.push_back(parseExpr(s));
 		}
 	} else if (sexpr.matchList({SExpr("return")})) {
 		if (sexpr.list.size() != 2) throw runtime_error("Invalid return");

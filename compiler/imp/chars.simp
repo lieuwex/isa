@@ -1,0 +1,6 @@
+(imp
+  (func main () int
+        (do
+          (decl (x i8) 97)
+          (call putchar (x))
+          (return 0))))

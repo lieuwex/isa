@@ -3,6 +3,7 @@
 #include <vector>
 #include <string>
 #include <memory>
+#include <optional>
 #include <cstdint>
 
 using namespace std;
@@ -14,18 +15,31 @@ using INT = int64_t;
 class Type {
 public:
 	enum {
+		INT_SIZED,  // bits
 		INT,
-		ARRAY,
+		ARRAY,      // contained
 	};
 
 	int tag;
-	unique_ptr<Type> contained;
+	int bits;
+	Type *contained = nullptr;
 
 	Type() = default;
-	Type(int tag);
-	Type(int tag, unique_ptr<Type> contained);
+	Type(const Type &other);
+	Type(Type &&other);
+	~Type();
+	Type& operator=(const Type &other);
+	Type& operator=(Type &&other);
+
+	static Type makeInt();
+	static Type makeIntSized(int bits);
+	static Type makeArray(const Type &contained);
 
 	int size() const;
+	bool isIntegral() const;
+
+	bool operator==(const Type &other) const;
+	bool operator!=(const Type &other) const;
 };
 
 class Decl {
@@ -53,6 +67,9 @@ public:
 	string variable;
 	unique_ptr<Expr> e1, e2;
 
+	// The type of the expression, annotated by the type checker
+	Type restype;
+
 	Expr() = default;
 	Expr(INT number);
 	Expr(const string &variable);
@@ -63,12 +80,12 @@ class Stmt {
 public:
 	enum {
 		DECL,    // decl, expr
-		ASSIGN,  // decl, expr
+		ASSIGN,  // target, expr
 		IF,      // expr, ch[0], ch[1]
 		WHILE,   // expr, ch[0]
 		DO,      // ch
 		CALL,    // name, args
-		CALLR,   // decl, name, args
+		CALLR,   // target, name, args
 		RETURN,  // expr
 	};
 
@@ -76,8 +93,8 @@ public:
 	Decl decl;
 	Expr expr;
 	vector<Stmt> ch;
-	string name;
-	vector<pair<Expr, Type>> args;
+	string name, target;
+	vector<Expr> args;
 };
 
 class Function {

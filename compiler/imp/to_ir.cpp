@@ -93,7 +93,7 @@ void ToIR::buildDecl(const Stmt &stmt, Id endbb) {
 }
 
 void ToIR::buildAssign(const Stmt &stmt, Id endbb) {
-	Loc loc = lookup(stmt.decl.name);
+	Loc loc = lookup(stmt.target);
 	if (loc.tag == -1) throw runtime_error("Assignment to undeclared variable");
 
 	Id bb1 = B.newBB();
@@ -153,19 +153,18 @@ void ToIR::buildDo(const Stmt &stmt, Id endbb) {
 void ToIR::buildCall(const Stmt &stmt, Id endbb, bool hasRet) {
 	INT sizesum = 0;
 	for (int i = stmt.args.size() - 1; i >= 0; i--) {
-		const Expr &expr = stmt.args[i].first;
-		const Type &type = stmt.args[i].second;
-
 		Id bb1 = B.newBB();
-		Loc loc = build(expr, bb1);
+		Loc loc = build(stmt.args[i], bb1);
+
+		// TODO: sizes?
 
 		B.switchBB(bb1);
 		Loc roff = B.genReg();
-		B.add(IRIns::li(roff, type.size()));
+		B.add(IRIns::li(roff, 8));
 		B.add(IRIns::arith(Arith::SUB, Loc::reg(RSP), Loc::reg(RSP), roff));
-		B.add(IRIns::store(Loc::reg(RSP), loc, type.size()));
+		B.add(IRIns::store(Loc::reg(RSP), loc, 8));
 
-		sizesum += type.size();
+		sizesum += 8;
 	}
 
 	B.add(IRIns::call(stmt.name));

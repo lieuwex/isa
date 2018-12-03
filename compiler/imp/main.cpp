@@ -2,6 +2,7 @@
 #include <fstream>
 #include "ast.h"
 #include "parser.h"
+#include "typecheck.h"
 #include "ir.h"
 #include "to_ir.h"
 #include "optimiser.h"
@@ -36,6 +37,8 @@ int main(int argc, char **argv) {
 	}
 
 	Program program = parseProgram(SExpr::parse(source));
+
+	typecheck(program);
 
 	IR ir = toIR(program);
 	cerr << ir << endl;

@@ -23,10 +23,10 @@ impl CPU {
     pub fn get_pc(&self) -> usize {
         self.get_reg(0) as usize
     }
-    pub fn get_instruction(&self) -> Instruction {
+    pub fn get_instruction(&self) -> Option<Instruction> {
         let pc = self.get_pc();
-        let raw: u64 = self.mem.read_data(pc);
-        instruction_decode(raw)
+        let raw: u64 = self.mem.read_data(pc)?;
+        Some(instruction_decode(raw))
     }
 
     pub fn set_reg(&mut self, i: usize, val: u64) {
@@ -98,19 +98,19 @@ impl CPU {
             Opcode::li => instr.immediate as u64,
 
             Opcode::l8 => {
-                let raw: u8 = self.mem.read_data(loc);
+                let raw: u8 = self.mem.read_data(loc).unwrap();
                 sign_extend(raw as u64, 8)
             }
             Opcode::l16 => {
-                let raw: u16 = self.mem.read_data(loc);
+                let raw: u16 = self.mem.read_data(loc).unwrap();
                 sign_extend(raw as u64, 16)
             },
             Opcode::l32 => {
-                let raw: u32 = self.mem.read_data(loc);
+                let raw: u32 = self.mem.read_data(loc).unwrap();
                 sign_extend(raw as u64, 32)
             },
             Opcode::l64 => {
-                let raw: u64 = self.mem.read_data(loc);
+                let raw: u64 = self.mem.read_data(loc).unwrap();
                 sign_extend(raw, 64)
             },
 
@@ -130,7 +130,7 @@ impl CPU {
             Opcode::s64 => self.mem.write_data(addr, val as u64),
 
             _ => return false,
-        }
+        };
 
         true
     }
@@ -153,19 +153,21 @@ impl CPU {
         }
     }
 
-    pub fn exec_loop(&mut self) {
+    pub fn exec_loop(&mut self) -> Option<()> {
         loop {
             let pc = self.get_pc();
-            let raw: u64 = self.mem.read_data(pc);
+            let raw: u64 = self.mem.read_data(pc)?;
             if raw == END_MARKER {
                 break;
             }
 
-            let instr = self.get_instruction();
+            let instr = self.get_instruction()?;
             self.inc_pc();
             self.execute(instr);
             //self.regs.print();
         }
+
+        Some(())
     }
 
     pub fn new(program: Vec<u64>) -> Self {

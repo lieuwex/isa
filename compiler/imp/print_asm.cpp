@@ -20,17 +20,17 @@ static void printASM(ostream &os, const Loc &loc) {
 static void printASM(ostream &os, const IRIns &ins) {
 	switch (ins.tag) {
 		case IRIns::NOP:
-			os << "mv r1, r1" << endl;
+			os << "\tmv r1, r1" << endl;
 			break;
 
 		case IRIns::LI:
-			os << "li ";
+			os << "\tli ";
 			printASM(os, ins.rd);
 			os << ", " << ins.number << endl;
 			break;
 
 		case IRIns::MOV:
-			os << "mv ";
+			os << "\tmv ";
 			printASM(os, ins.rd);
 			os << ", ";
 			printASM(os, ins.r1);
@@ -38,7 +38,7 @@ static void printASM(ostream &os, const IRIns &ins) {
 			break;
 
 		case IRIns::STORE:
-			os << "s" << 8 * ins.size << " ";
+			os << "\ts" << 8 * ins.size << " ";
 			printASM(os, ins.rd);
 			os << ", ";
 			printASM(os, ins.r1);
@@ -46,7 +46,7 @@ static void printASM(ostream &os, const IRIns &ins) {
 			break;
 
 		case IRIns::LOAD:
-			os << "l" << 8 * ins.size << " ";
+			os << "\tl" << 8 * ins.size << " ";
 			printASM(os, ins.rd);
 			os << ", ";
 			printASM(os, ins.r1);
@@ -55,12 +55,12 @@ static void printASM(ostream &os, const IRIns &ins) {
 
 		case IRIns::ARITH:
 			switch (ins.op) {
-				case Arith::ADD: os << "add"; break;
-				case Arith::SUB: os << "sub"; break;
-				case Arith::MUL: os << "mul"; break;
-				case Arith::DIV: os << "div"; break;
-				case Arith::LT: os << "lt"; break;
-				case Arith::LTE: os << "lte"; break;
+				case Arith::ADD: os << "\tadd"; break;
+				case Arith::SUB: os << "\tsub"; break;
+				case Arith::MUL: os << "\tmul"; break;
+				case Arith::DIV: os << "\tdiv"; break;
+				case Arith::LT: os << "\tlt"; break;
+				case Arith::LTE: os << "\tlte"; break;
 				default: assert(false);
 			}
 			os << " ";
@@ -73,7 +73,7 @@ static void printASM(ostream &os, const IRIns &ins) {
 			break;
 
 		case IRIns::CALL:
-			os << "call r14, " << ins.name << endl;
+			os << "\tcall r14, " << ins.name << endl;
 			break;
 
 		default:
@@ -84,22 +84,22 @@ static void printASM(ostream &os, const IRIns &ins) {
 static void printASM(ostream &os, const IRTerm &term, const string &lblPrefix) {
 	switch (term.tag) {
 		case IRTerm::JMP:
-			os << "jnz r0, BB" << lblPrefix << term.id << endl;
+			os << "\tjnz r0, BB" << lblPrefix << term.id << endl;
 			break;
 
 		case IRTerm::JZ:
-			os << "jz ";
+			os << "\tjz ";
 			printASM(os, Loc(term.r1));
 			os << ", BB" << lblPrefix << term.idT << endl;
-			os << "jnz r0, BB" << lblPrefix << term.idF << endl;
+			os << "\tjnz r0, BB" << lblPrefix << term.idF << endl;
 			break;
 
 		case IRTerm::RET:
-			os << "mv r0, r14" << endl;
+			os << "\tmv r0, r14" << endl;
 			break;
 
 		case IRTerm::UNREACH:
-			os << "unreachable" << endl;
+			os << "\tunreachable" << endl;
 			break;
 
 		default:
@@ -110,10 +110,8 @@ static void printASM(ostream &os, const IRTerm &term, const string &lblPrefix) {
 static void printASM(ostream &os, const BB &bb, const string &lblPrefix) {
 	os << "BB" << lblPrefix << bb.id << ":" << endl;
 	for (const IRIns &ins : bb.inss) {
-		os << "\t";
 		printASM(os, ins);
 	}
-	os << "\t";
 	printASM(os, bb.term, lblPrefix);
 }
 

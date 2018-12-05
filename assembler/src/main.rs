@@ -35,7 +35,7 @@ fn main() -> Result<(), io::Error> {
                 for instr in instrs {
                     let val = instr.encode();
                     let bytes: [u8; 8] = unsafe { transmute(val.to_le()) };
-                    stdout.write(&bytes)?;
+                    stdout.write_all(&bytes)?;
                 }
             }
         }

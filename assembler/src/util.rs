@@ -1,7 +1,7 @@
 use std::num;
 use std::result::Result;
 
-pub fn parse_number(s: String) -> Result<i64, num::ParseIntError> {
+pub fn parse_number(s: &str) -> Result<i64, num::ParseIntError> {
     let skip = |n: usize| -> String { s.chars().skip(n).collect() };
 
     if s.starts_with("0x") {
@@ -11,6 +11,6 @@ pub fn parse_number(s: String) -> Result<i64, num::ParseIntError> {
         let s = skip(2);
         i64::from_str_radix(s.as_str(), 8)
     } else {
-        i64::from_str_radix(s.as_str(), 10)
+        i64::from_str_radix(s, 10)
     }
 }

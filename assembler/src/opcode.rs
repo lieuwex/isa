@@ -79,7 +79,7 @@ pub enum Configuration {
 }
 
 impl Opcode {
-    pub fn configuration(&self) -> Configuration {
+    pub fn configuration(self) -> Configuration {
         match self {
             Opcode::add => Configuration::rd_r1_r2,
             Opcode::sub => Configuration::rd_r1_r2,
@@ -129,7 +129,7 @@ pub enum OpaqueOpcode {
 }
 
 impl OpaqueOpcode {
-    fn configuration(&self) -> Configuration {
+    fn configuration(self) -> Configuration {
         match self {
             OpaqueOpcode::j => Configuration::imm,
 
@@ -160,7 +160,7 @@ pub fn str_to_internal_opcode(s: &str) -> InternalOpcode {
 }
 
 impl InternalOpcode {
-    pub fn configuration(&self) -> Configuration {
+    pub fn configuration(self) -> Configuration {
         match self {
             InternalOpcode::Real(x) => x.configuration(),
             InternalOpcode::Opaque(x) => x.configuration(),

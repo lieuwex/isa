@@ -23,7 +23,7 @@ impl fmt::Display for ParseError {
 fn err_int_parse(line_number: usize) -> ParseError {
     ParseError {
         description: String::from("couldn't parse number"),
-        line_number: line_number,
+        line_number,
     }
 }
 
@@ -73,7 +73,7 @@ impl Tokenizer {
                 if $w.is_empty() {
                     return Err(ParseError {
                         description: String::from($e),
-                        line_number: line_number,
+                        line_number,
                     });
                 }
             };
@@ -132,13 +132,10 @@ impl ParseContext {
 
         // if this is a label declaration line, add the label to the labels map and skip
         // the current line
-        match labelreg.captures(line) {
-            Some(caps) => {
-                let label = &caps[1];
-                self.labels.insert(label.to_string(), self.n_instructions);
-                return None;
-            }
-            None => {}
+        if let Some(caps) = labelreg.captures(line) {
+            let label = &caps[1];
+            self.labels.insert(label.to_string(), self.n_instructions);
+            return None;
         }
 
         let (instr, args) = match Tokenizer::new(line).tokenize(line_number) {
@@ -149,7 +146,7 @@ impl ParseContext {
         let get_reg_num = |i: usize| -> Result<u8, num::ParseIntError> {
             let n: String = args[i].chars().skip(1).collect();
 
-            match parse_number(n) {
+            match parse_number(n.as_str()) {
                 Ok(n) => Ok(n as u8),
                 Err(e) => Err(e),
             }
@@ -168,13 +165,13 @@ impl ParseContext {
             // the immediate should be a literal value when the first
             // character is a digit, otherwise we treat it as a unevaluated
             // label reference.
-            let r2 = args[n].to_string();
+            let r2 = &args[n];
 
             let c = match r2.chars().next() {
                 None => {
                     return Err(ParseError {
                         description: String::from("no immediate value given"),
-                        line_number: line_number,
+                        line_number,
                     })
                 }
                 Some(c) => c,
@@ -208,7 +205,7 @@ impl ParseContext {
             rs1: 0,
             rs2: 0,
             immediate: Immediate::Value(0),
-            line_number: line_number,
+            line_number,
         };
 
         // REVIEW: check if non decimal numbers are supported

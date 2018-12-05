@@ -13,9 +13,9 @@ impl Instruction {
     pub fn encode(&self) -> u64 {
         let mut res: u64 = 0;
         res |= self.opcode as u64;
-        res |= (self.rd as u64) << 7;
-        res |= (self.rs1 as u64) << 11;
-        res |= (self.rs2 as u64) << 15;
+        res |= u64::from(self.rd) << 7;
+        res |= u64::from(self.rs1) << 11;
+        res |= u64::from(self.rs2) << 15;
         res |= (self.immediate as u64) << 19;
         res
     }

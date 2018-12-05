@@ -99,15 +99,15 @@ impl CPU {
 
             Opcode::l8 => {
                 let raw: u8 = self.mem.read_data(loc).unwrap();
-                sign_extend(raw as u64, 8)
+                sign_extend(u64::from(raw), 8)
             }
             Opcode::l16 => {
                 let raw: u16 = self.mem.read_data(loc).unwrap();
-                sign_extend(raw as u64, 16)
+                sign_extend(u64::from(raw), 16)
             },
             Opcode::l32 => {
                 let raw: u32 = self.mem.read_data(loc).unwrap();
-                sign_extend(raw as u64, 32)
+                sign_extend(u64::from(raw), 32)
             },
             Opcode::l64 => {
                 let raw: u64 = self.mem.read_data(loc).unwrap();

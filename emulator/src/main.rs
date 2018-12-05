@@ -18,10 +18,9 @@ fn main() -> Result<(), io::Error> {
     };
 
     let mut cpu = CPU::new(Vec::from(prog));
-    match cpu.exec_loop() {
-        None => eprintln!("error while executing"),
-        _ => {},
-    };
+    if cpu.exec_loop().is_none() {
+        eprintln!("error while executing");
+    }
 
     Ok(())
 }

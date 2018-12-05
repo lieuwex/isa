@@ -1,10 +1,8 @@
-use std::result::Result;
 use std::num;
+use std::result::Result;
 
 pub fn parse_number(s: String) -> Result<i64, num::ParseIntError> {
-    let skip = |n: usize| -> String {
-        s.chars().skip(n).collect()
-    };
+    let skip = |n: usize| -> String { s.chars().skip(n).collect() };
 
     if s.starts_with("0x") {
         let s = skip(2);

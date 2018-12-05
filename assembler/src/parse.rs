@@ -1,8 +1,8 @@
 use instruction::*;
 use opcode::*;
-use regex::{Regex};
+use regex::Regex;
 use std::collections::HashMap;
-use std::fmt;
+use std::{fmt, num};
 use util::*;
 
 #[derive(Debug, Clone)]
@@ -17,6 +17,13 @@ impl fmt::Display for ParseError {
             "parse error at line {}: {}",
             self.line_number, self.description
         )
+    }
+}
+
+fn err_int_parse(line_number: usize) -> ParseError {
+    ParseError {
+        description: String::from("couldn't parse number"),
+        line_number: line_number,
     }
 }
 
@@ -60,16 +67,30 @@ impl Tokenizer {
         res
     }
 
-    pub fn tokenize(&mut self) -> (String, Vec<String>) {
+    pub fn tokenize(&mut self, line_number: usize) -> Result<(String, Vec<String>), ParseError> {
+        macro_rules! non_empty {
+            ( $w:expr, $e:expr ) => {
+                if $w.is_empty() {
+                    return Err(ParseError {
+                        description: String::from($e),
+                        line_number: line_number,
+                    });
+                }
+            };
+        }
+
         self.skip_spaces();
         let instruction = self.get_word();
+        non_empty!(instruction, "expected instruction");
         self.skip_spaces();
 
         let mut args = vec![];
         while self.inbound() {
             self.skip_spaces();
 
-            args.push(self.get_word());
+            let arg = self.get_word();
+            non_empty!(arg, "expected argument");
+            args.push(arg);
             self.skip_spaces();
 
             if !self.inbound() || self.curr() != ',' {
@@ -78,7 +99,7 @@ impl Tokenizer {
             self.skip(1);
         }
 
-        (instruction, args)
+        Ok((instruction, args))
     }
 
     pub fn new(s: &str) -> Self {
@@ -90,7 +111,11 @@ impl Tokenizer {
 }
 
 impl ParseContext {
-    fn parse_line(&mut self, line: &str, line_number: usize) -> Option<InternalInstruction> {
+    fn parse_line(
+        &mut self,
+        line: &str,
+        line_number: usize,
+    ) -> Option<Result<InternalInstruction, ParseError>> {
         lazy_static! {
             static ref commentreg: Regex = Regex::new(r";.+$").unwrap();
             static ref labelreg: Regex = Regex::new(r"(?i)^([a-z]\w*):$").unwrap();
@@ -116,13 +141,64 @@ impl ParseContext {
             None => {}
         }
 
-        let (instr, args) = Tokenizer::new(line).tokenize();
-        let get_reg_num = |i: usize| {
-            let n: String = args[i].chars()
-                .skip(1)
-                .collect();
-            parse_number(n).unwrap() as u8
+        let (instr, args) = match Tokenizer::new(line).tokenize(line_number) {
+            Ok(res) => res,
+            Err(err) => return Some(Err(err)),
         };
+
+        let get_reg_num = |i: usize| -> Result<u8, num::ParseIntError> {
+            let n: String = args[i].chars().skip(1).collect();
+
+            match parse_number(n) {
+                Ok(n) => Ok(n as u8),
+                Err(e) => Err(e),
+            }
+        };
+        macro_rules! get_reg {
+            ( $e:expr ) => {
+                match get_reg_num($e) {
+                    Ok(x) => x,
+                    Err(_) => return Some(Err(err_int_parse(line_number))),
+                }
+            };
+        }
+
+        let n_instr = self.n_instructions;
+        let get_immediate = |n: usize| -> Result<Immediate, ParseError> {
+            // the immediate should be a literal value when the first
+            // character is a digit, otherwise we treat it as a unevaluated
+            // label reference.
+            let r2 = args[n].to_string();
+
+            let c = match r2.chars().next() {
+                None => {
+                    return Err(ParseError {
+                        description: String::from("no immediate value given"),
+                        line_number: line_number,
+                    })
+                }
+                Some(c) => c,
+            };
+
+            let res = if c.is_digit(10) {
+                let n = match parse_number(r2) {
+                    Ok(n) => n,
+                    Err(_) => return Err(err_int_parse(line_number)),
+                };
+                Immediate::Value(n)
+            } else {
+                Immediate::LabelRef(r2.to_string(), n_instr)
+            };
+            Ok(res)
+        };
+        macro_rules! get_imm {
+            ( $e: expr ) => {
+                match get_immediate($e) {
+                    Ok(x) => x,
+                    Err(e) => return Some(Err(e)),
+                }
+            };
+        }
 
         // the thing we're going to return, parse the instruction from the line too and
         // convert it to its opcode
@@ -135,52 +211,38 @@ impl ParseContext {
             line_number: line_number,
         };
 
-        let n_instr = self.n_instructions;
-        let get_immediate = |n: usize| {
-            // the immediate should be a literal value when the first
-            // character is a digit, otherwise we treat it as a unevaluated
-            // label reference.
-            let r2 = args[n].to_string();
-            let res = if r2.chars().next()?.is_digit(10) {
-                Immediate::Value(parse_number(r2).unwrap())
-            } else {
-                Immediate::LabelRef(r2.to_string(), n_instr)
-            };
-            Ok(res)
-        };
-
         // REVIEW: check if non decimal numbers are supported
         // match the parsed opcode to its configuration, then retrieve the correct
         // values for every field
         match res.opcode.configuration() {
             Configuration::imm => {
-                res.immediate = get_immediate(0)?;
+                res.immediate = get_imm!(0);
             }
             Configuration::rd_imm => {
-                res.rd = get_reg_num(0);
-                res.immediate = get_immediate(1)?;
+                res.rd = get_reg!(0);
+                res.immediate = get_imm!(1);
             }
             Configuration::r1_imm => {
-                res.rs1 = get_reg_num(0);
-                res.immediate = get_immediate(1)?;
+                res.rs1 = get_reg!(0);
+                res.immediate = get_imm!(1);
             }
             Configuration::rd_r1_r2 => {
-                res.rd = get_reg_num(0);
-                res.rs1 = get_reg_num(1);
-                res.rs2 = get_reg_num(2);
+                res.rd = get_reg!(0);
+                res.rs1 = get_reg!(1);
+                res.rs2 = get_reg!(2);
             }
             Configuration::rd_r1 => {
-                res.rd = get_reg_num(0);
-                res.rs1 = get_reg_num(1);
+                res.rd = get_reg!(0);
+                res.rs1 = get_reg!(1);
             }
             Configuration::r1_r2 => {
-                res.rs1 = get_reg_num(0);
-                res.rs2 = get_reg_num(1);
+                res.rs1 = get_reg!(0);
+                res.rs2 = get_reg!(1);
             }
         };
 
         self.n_instructions += 8;
-        Some(res)
+        Some(Ok(res))
     }
 
     fn inline_labels(
@@ -190,9 +252,7 @@ impl ParseContext {
         let immediate = match instr.immediate {
             Immediate::LabelRef(ref labelname, labelloc) => {
                 match self.labels.get(labelname.as_str()) {
-                    Some(instrloc) => {
-                        instrloc - labelloc - 8
-                    }
+                    Some(instrloc) => instrloc - labelloc - 8,
                     None => {
                         return Err(ParseError {
                             description: format!("couldn't find label '{}'", labelname),
@@ -215,17 +275,18 @@ pub fn parse(prog: &str) -> Vec<Result<InternalInstruction, ParseError>> {
         n_instructions: 0,
     };
 
-    let parsed: Vec<InternalInstruction> = prog
+    let parsed: Vec<Result<InternalInstruction, ParseError>> = prog
         .lines()
         .enumerate()
         .map(|(i, l)| ctx.parse_line(l, i))
         .filter(|x| x.is_some())
-        .map(|x| x.unwrap())
+        .map(|x| x.unwrap()) // never panics
         .collect();
-
 
     parsed
         .iter()
-        .map(|instr| ctx.inline_labels(instr.clone()))
-        .collect()
+        .map(|instr| match instr {
+            Ok(x) => ctx.inline_labels(x.clone()),
+            Err(e) => Err(e.clone()),
+        }).collect()
 }

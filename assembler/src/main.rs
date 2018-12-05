@@ -2,19 +2,19 @@ extern crate regex;
 #[macro_use]
 extern crate lazy_static;
 
+mod convert;
 mod instruction;
 mod opcode;
 mod parse;
 mod util;
-mod convert;
 
+use convert::*;
 use parse::*;
 use std::env;
 use std::fs;
 use std::io::{self, Write};
 use std::mem::transmute;
 use std::process::exit;
-use convert::*;
 
 fn main() -> Result<(), io::Error> {
     let args: Vec<String> = env::args().collect();

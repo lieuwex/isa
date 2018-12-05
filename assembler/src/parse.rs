@@ -279,8 +279,7 @@ pub fn parse(prog: &str) -> Vec<Result<InternalInstruction, ParseError>> {
         .lines()
         .enumerate()
         .map(|(i, l)| ctx.parse_line(l, i))
-        .filter(|x| x.is_some())
-        .map(|x| x.unwrap()) // never panics
+        .filter_map(|x| x)
         .collect();
 
     parsed

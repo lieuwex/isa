@@ -148,7 +148,7 @@ pub enum InternalOpcode {
 pub fn str_to_internal_opcode(s: &str) -> InternalOpcode {
     match str_to_opcode(s) {
         Opcode::unknown => {}
-        op @ _ => return InternalOpcode::Real(op),
+        op => return InternalOpcode::Real(op),
     };
 
     match s {

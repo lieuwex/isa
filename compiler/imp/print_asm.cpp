@@ -90,8 +90,8 @@ static void printASM(ostream &os, const IRTerm &term, const string &lblPrefix) {
 		case IRTerm::JZ:
 			os << "jz ";
 			printASM(os, Loc(term.r1));
-			os << ", BB" << lblPrefix << term.idT;
-			os << ", BB" << lblPrefix << term.idF << endl;
+			os << ", BB" << lblPrefix << term.idT << endl;
+			os << "jnz r0, BB" << lblPrefix << term.idF << endl;
 			break;
 
 		case IRTerm::RET:

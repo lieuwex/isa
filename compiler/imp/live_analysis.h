@@ -19,5 +19,4 @@ struct Interval {
 	void include(int index);
 };
 
-unordered_map<Loc, Interval> live_analysis(
-		const IFunc &ifunc, const vector<Id> &bbOrder);
+unordered_map<Loc, Interval> live_analysis(const IFunc &ifunc);

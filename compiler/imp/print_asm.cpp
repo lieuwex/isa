@@ -119,8 +119,8 @@ static void printASM(ostream &os, const BB &bb, const string &lblPrefix) {
 
 static void printASM(ostream &os, const IFunc &ifunc) {
 	os << ifunc.name << ":" << endl;
-	for (const auto &p : ifunc.BBs) {
-		printASM(os, p.second, ifunc.name);
+	for (Id id : ifunc.bbOrder) {
+		printASM(os, ifunc.BBs.find(id)->second, ifunc.name);
 	}
 }
 

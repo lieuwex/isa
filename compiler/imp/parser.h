@@ -19,13 +19,13 @@ public:
 
 	int tag;
 	string word;
-	INT number;
+	i64 number;
 	vector<SExpr> list;
 
 	static SExpr parse(string_view source);
 
 	SExpr() = default;
-	SExpr(INT number);
+	SExpr(i64 number);
 	SExpr(const string &word);
 	SExpr(const vector<SExpr> &list);
 

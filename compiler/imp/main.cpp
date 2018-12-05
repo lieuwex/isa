@@ -38,6 +38,11 @@ int main(int argc, char **argv) {
 
 	Program program = parseProgram(SExpr::parse(source));
 
+	// for (const Function &function : program.functions) {
+	//     function.body.writeProlog(cerr);
+	//     cerr << endl;
+	// }
+
 	typecheck(program);
 
 	IR ir = toIR(program);
@@ -49,12 +54,12 @@ int main(int argc, char **argv) {
 	for (auto &p : ir.funcs) {
 		IFunc &ifunc = p.second;
 
-		vector<Id> order = orderBBs(ifunc);
+		ifunc.bbOrder = orderBBs(ifunc);
 		cerr << "ORDER" << endl;
-		for (Id id : order) cerr << id << ' ';
+		for (Id id : ifunc.bbOrder) cerr << id << ' ';
 		cerr << endl;
 
-		unordered_map<Loc, Interval> liveness = live_analysis(ifunc, order);
+		unordered_map<Loc, Interval> liveness = live_analysis(ifunc);
 		cerr << "LIVENESS" << endl;
 		for (const auto &p : liveness) {
 			cerr << p.first << ": " << p.second.from << " - " << p.second.to << endl;
@@ -68,7 +73,7 @@ int main(int argc, char **argv) {
 			cerr << p.first << ": " << p.second << endl;
 		}
 
-		INT rspShift = applyRegalloc(ifunc, allocation);
+		i64 rspShift = applyRegalloc(ifunc, allocation);
 
 		assemble(ifunc, rspShift);
 		cerr << ifunc << endl;

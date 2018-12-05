@@ -5,4 +5,4 @@
 using namespace std;
 
 
-void assemble(IFunc &ifunc, INT rspShift);
+void assemble(IFunc &ifunc, i64 rspShift);

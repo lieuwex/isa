@@ -128,7 +128,7 @@ static void collectLocs(
 static void applyRegalloc(
 		BB &bb,
 		const unordered_map<Loc, Alloc> &allocation,
-		const unordered_map<Loc, INT> &spillOffset) {
+		const unordered_map<Loc, i64> &spillOffset) {
 
 	// TODO: update Loc::ARG references after incorporating offset
 	// from added prefix instructions
@@ -146,7 +146,7 @@ static void applyRegalloc(
 				assert(available.size() >= 1);
 				Loc reg = available.back(); available.pop_back();
 
-				INT offset = spillOffset.find(loc)->second;
+				i64 offset = spillOffset.find(loc)->second;
 				prefix.push_back(IRIns::li(reg, offset));
 				prefix.push_back(IRIns::arith(Arith::ADD, reg, Loc::reg(RSP), reg));
 				prefix.push_back(IRIns::load(reg, reg, 8));  // TODO: sizes?
@@ -166,7 +166,7 @@ static void applyRegalloc(
 				Loc ptrreg = available.back(); available.pop_back();
 				Loc reg = available.back(); available.pop_back();
 
-				INT offset = spillOffset.find(loc)->second;
+				i64 offset = spillOffset.find(loc)->second;
 				suffix.push_back(IRIns::li(ptrreg, offset));
 				suffix.push_back(IRIns::arith(Arith::ADD, ptrreg, Loc::reg(RSP), ptrreg));
 				suffix.push_back(IRIns::store(ptrreg, reg, 8));  // TODO: sizes?
@@ -194,7 +194,7 @@ static void applyRegalloc(
 			assert(available.size() >= 1);
 			Loc reg = available.back(); available.pop_back();
 
-			INT offset = spillOffset.find(loc)->second;
+			i64 offset = spillOffset.find(loc)->second;
 			prefix.push_back(IRIns::li(reg, offset));
 			prefix.push_back(IRIns::arith(Arith::ADD, reg, Loc::reg(RSP), reg));
 			prefix.push_back(IRIns::load(reg, reg, 8));  // TODO: sizes?
@@ -208,8 +208,8 @@ static void applyRegalloc(
 	bb.inss.insert(bb.inss.end(), prefix.begin(), prefix.end());
 }
 
-INT applyRegalloc(IFunc &ifunc, const unordered_map<Loc, Alloc> &allocation) {
-	unordered_map<Loc, INT> spillOffset;
+i64 applyRegalloc(IFunc &ifunc, const unordered_map<Loc, Alloc> &allocation) {
+	unordered_map<Loc, i64> spillOffset;
 
 	const Id startid = 0;
 

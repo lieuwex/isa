@@ -4,7 +4,7 @@
 using namespace std;
 
 
-static void replaceArgRefs(IFunc &ifunc, INT rspShift) {
+static void replaceArgRefs(IFunc &ifunc, i64 rspShift) {
 	const auto argOffset = [rspShift](int argNum) {
 		// rspShift to cover the offset due to spilling of IR registers
 		// 8 to cover the link register storage
@@ -160,7 +160,7 @@ Function layout:
   Here we need to resort to r12. HACK.
 */
 
-void assemble(IFunc &ifunc, INT rspShift) {
+void assemble(IFunc &ifunc, i64 rspShift) {
 	set<Loc> usedRegs;
 	for (const auto &p : ifunc.BBs) collectRegs(p.second, usedRegs);
 

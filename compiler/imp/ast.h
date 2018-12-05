@@ -1,5 +1,6 @@
 #pragma once
 
+#include <iostream>
 #include <vector>
 #include <string>
 #include <memory>
@@ -9,15 +10,15 @@
 using namespace std;
 
 
-using INT = int64_t;
+using i64 = int64_t;
 
 
 class Type {
 public:
 	enum {
-		INT_SIZED,  // bits
-		INT,
-		ARRAY,      // contained
+		INT,    // bits
+		UINT,   // bits
+		ARRAY,  // contained
 	};
 
 	int tag;
@@ -31,21 +32,26 @@ public:
 	Type& operator=(const Type &other);
 	Type& operator=(Type &&other);
 
-	static Type makeInt();
-	static Type makeIntSized(int bits);
+	static Type makeInt(int bits);
+	static Type makeUInt(int bits);
 	static Type makeArray(const Type &contained);
+	static Type maxType(const Type &a, const Type &b);
 
 	int size() const;
-	bool isIntegral() const;
+	Type growInt() const;
 
 	bool operator==(const Type &other) const;
 	bool operator!=(const Type &other) const;
+
+	void writeProlog(ostream &os) const;
 };
 
 class Decl {
 public:
 	string name;
 	Type type;
+
+	void writeProlog(ostream &os) const;
 };
 
 class Expr {
@@ -60,20 +66,29 @@ public:
 		DIVIDE,     // e1, e2
 		LESS,       // e1, e2
 		LESSEQUAL,  // e1, e2
+
+		CONVERT,    // e1, type
 	};
 
 	int tag;
-	INT number;
+	i64 number;
 	string variable;
 	unique_ptr<Expr> e1, e2;
+	Type type;
 
 	// The type of the expression, annotated by the type checker
 	Type restype;
+	// The smallest type necessary to store the result, annotated by the type checker
+	Type mintype;
 
 	Expr() = default;
-	Expr(INT number);
+	Expr(i64 number);
 	Expr(const string &variable);
-	Expr(int tag, unique_ptr<Expr> e1, unique_ptr<Expr> e2);
+	Expr(int tag, unique_ptr<Expr> &&e1, unique_ptr<Expr> &&e2);
+
+	static Expr makeConvert(unique_ptr<Expr> &&e1, const Type &type);
+
+	void writeProlog(ostream &os) const;
 };
 
 class Stmt {
@@ -95,6 +110,8 @@ public:
 	vector<Stmt> ch;
 	string name, target;
 	vector<Expr> args;
+
+	void writeProlog(ostream &os) const;
 };
 
 class Function {

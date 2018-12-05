@@ -13,7 +13,7 @@ IRIns IRIns::nop() {
 	return ins;
 }
 
-IRIns IRIns::li(Loc rd, INT number) {
+IRIns IRIns::li(Loc rd, i64 number) {
 	IRIns ins;
 	ins.tag = LI;
 	ins.rd = rd;

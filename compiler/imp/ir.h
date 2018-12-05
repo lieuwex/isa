@@ -76,12 +76,12 @@ public:
 	int tag = -1;
 	Arith op;
 	Loc rd, r1, r2;
-	INT number = 0;
+	i64 number = 0;
 	int size = -1;
 	string name;
 
 	static IRIns nop();
-	static IRIns li(Loc rd, INT number);
+	static IRIns li(Loc rd, i64 number);
 	static IRIns mov(Loc rd, Loc r1);
 	static IRIns store(Loc rd, Loc r1, int size);
 	static IRIns load(Loc rd, Loc r1, int size);
@@ -129,6 +129,7 @@ class IFunc {
 public:
 	string name;
 	unordered_map<Id, BB> BBs;
+	vector<Id> bbOrder;
 };
 
 class IR {

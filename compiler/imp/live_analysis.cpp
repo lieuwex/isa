@@ -165,22 +165,20 @@ ostream& operator<<(ostream &os, const set<T> &s) {
 	return os << '}';
 }
 
-unordered_map<Loc, Interval> live_analysis(
-		const IFunc &ifunc, const vector<Id> &bbOrder) {
+unordered_map<Loc, Interval> live_analysis(const IFunc &ifunc) {
+	assert(ifunc.BBs.size() == ifunc.bbOrder.size());
 
-	assert(ifunc.BBs.size() == bbOrder.size());
-
-	vector<GK> blocks(bbOrder.size());
-	fill_genkill(blocks, ifunc, bbOrder);
-	fill_nexts(blocks, ifunc, bbOrder);
+	vector<GK> blocks(ifunc.bbOrder.size());
+	fill_genkill(blocks, ifunc, ifunc.bbOrder);
+	fill_nexts(blocks, ifunc, ifunc.bbOrder);
 	fill_prevs(blocks);
 	fill_live(blocks);
 
 	unordered_map<Loc, Interval> ivs;
 
 	int index = 0;
-	for (size_t i = 0; i < bbOrder.size(); i++) {
-		const BB &bb = ifunc.BBs.find(bbOrder[i])->second;
+	for (size_t i = 0; i < ifunc.bbOrder.size(); i++) {
+		const BB &bb = ifunc.BBs.find(ifunc.bbOrder[i])->second;
 
 		set<Loc> live = blocks[i].liveOut;
 		for (const Loc &loc : live) {

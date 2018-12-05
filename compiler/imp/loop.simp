@@ -1,7 +1,7 @@
 (imp
-  (func main () int
+  (func main () i64
         (do
-          (decl (x int) 97)
+          (decl (x i8) 97)
           (while (< x (+ 97 26))
                  (do
                    (call putchar (x))

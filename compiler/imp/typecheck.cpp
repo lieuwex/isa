@@ -81,10 +81,22 @@ void TypeCheck::check(Function &func) {
 	leaveScope();
 }
 
+void possiblyCoerceInt(Expr &expr, const Type &wanted) {
+	if (expr.restype == wanted) return;
+	if (expr.mintype.tag == wanted.tag &&
+			(wanted.tag == Type::INT || wanted.tag == Type::UINT) &&
+			expr.mintype.bits <= wanted.bits) {
+		expr = Expr::makeConvert(make_unique<Expr>(move(expr)), wanted);
+		expr.mintype = wanted;
+		expr.restype = wanted;
+	}
+}
+
 void TypeCheck::check(Stmt &stmt) {
 	switch (stmt.tag) {
 		case Stmt::DECL:
 			check(stmt.expr);
+			possiblyCoerceInt(stmt.expr, stmt.decl.type);
 			if (stmt.expr.restype != stmt.decl.type) {
 				throw runtime_error("Unequal types in variable initialisation");
 			}
@@ -97,6 +109,7 @@ void TypeCheck::check(Stmt &stmt) {
 				throw runtime_error("Assignment to undeclared variable");
 			}
 			check(stmt.expr);
+			possiblyCoerceInt(stmt.expr, type);
 			if (stmt.expr.restype != type) {
 				throw runtime_error("Unequal types in variable assignment");
 			}
@@ -105,7 +118,8 @@ void TypeCheck::check(Stmt &stmt) {
 
 		case Stmt::IF:
 			check(stmt.expr);
-			if (!stmt.expr.restype.isIntegral()) {
+			possiblyCoerceInt(stmt.expr, Type::makeInt(1));
+			if (stmt.expr.restype != Type::makeInt(1)) {
 				throw runtime_error("Invalid type in if condition");
 			}
 			enterScope(); check(stmt.ch[0]); leaveScope();
@@ -114,7 +128,8 @@ void TypeCheck::check(Stmt &stmt) {
 
 		case Stmt::WHILE:
 			check(stmt.expr);
-			if (!stmt.expr.restype.isIntegral()) {
+			possiblyCoerceInt(stmt.expr, Type::makeInt(1));
+			if (stmt.expr.restype != Type::makeInt(1)) {
 				throw runtime_error("Invalid type in while condition");
 			}
 			enterScope(); check(stmt.ch[0]); leaveScope();
@@ -147,6 +162,7 @@ void TypeCheck::check(Stmt &stmt) {
 			}
 			for (size_t i = 0; i < stmt.args.size(); i++) {
 				check(stmt.args[i]);
+				possiblyCoerceInt(stmt.args[i], descr.second[i]);
 				if (stmt.args[i].restype != descr.second[i]) {
 					throw runtime_error("Invalid type in argument in function call");
 				}
@@ -169,16 +185,25 @@ void TypeCheck::check(Stmt &stmt) {
 
 void TypeCheck::check(Expr &expr) {
 	switch (expr.tag) {
-		case Expr::NUMBER:
-			expr.restype = Type::makeInt();
+		case Expr::NUMBER: {
+			expr.restype = Type::makeInt(64);
+			expr.mintype = Type::makeInt(1);
 			break;
+		}
 
 		case Expr::VARIABLE: {
 			Type type = lookup(expr.variable);
 			if (type.tag == -1) {
 				throw runtime_error("Use of undeclared variable");
 			}
-			expr.restype = type;
+			Type largetype = type.growInt();
+			if (largetype != type) {
+				expr = Expr::makeConvert(make_unique<Expr>(move(expr)), largetype);
+				expr.e1->mintype = type;
+				expr.e1->restype = type;
+			}
+			expr.mintype = type;
+			expr.restype = largetype;
 			break;
 		}
 
@@ -186,17 +211,39 @@ void TypeCheck::check(Expr &expr) {
 		case Expr::MINUS:
 		case Expr::TIMES:
 		case Expr::DIVIDE:
-		case Expr::LESS:
-		case Expr::LESSEQUAL: {
 			check(*expr.e1);
 			check(*expr.e2);
-			if (expr.e1->restype.isIntegral() && expr.e2->restype.isIntegral()) {
-				expr.restype = Type::makeInt();
+			if (expr.e1->restype.tag == Type::INT && expr.e2->restype.tag == Type::INT) {
+				expr.restype = Type::makeInt(64);
+				expr.mintype = Type::maxType(expr.e1->mintype, expr.e2->mintype);
+			} else if (expr.e1->restype.tag == Type::UINT && expr.e2->restype.tag == Type::UINT) {
+				expr.restype = Type::makeUInt(64);
+				expr.mintype = Type::maxType(expr.e1->mintype, expr.e2->mintype);
 			} else {
-				throw runtime_error("Invalid types in binary operator");
+				throw runtime_error("Invalid types in binary arithmetic operator");
+			}
+			if (expr.mintype != expr.e1->mintype) {
+				Expr e = Expr::makeConvert(move(expr.e1), expr.mintype);
+				expr.e1 = make_unique<Expr>(move(e));
+			}
+			if (expr.mintype != expr.e2->mintype) {
+				Expr e = Expr::makeConvert(move(expr.e2), expr.mintype);
+				expr.e2 = make_unique<Expr>(move(e));
 			}
 			break;
-		}
+
+		case Expr::LESS:
+		case Expr::LESSEQUAL:
+			check(*expr.e1);
+			check(*expr.e2);
+			if (expr.e1->restype.tag == expr.e2->restype.tag &&
+					(expr.e1->restype.tag == Type::INT || expr.e1->restype.tag == Type::UINT)) {
+				expr.restype = Type::makeInt(1);
+				expr.mintype = Type::makeInt(1);
+			} else {
+				throw runtime_error("Invalid types in binary comparison operator");
+			}
+			break;
 
 		default: assert(false);
 	}

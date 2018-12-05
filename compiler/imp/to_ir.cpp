@@ -151,7 +151,7 @@ void ToIR::buildDo(const Stmt &stmt, Id endbb) {
 }
 
 void ToIR::buildCall(const Stmt &stmt, Id endbb, bool hasRet) {
-	INT sizesum = 0;
+	i64 sizesum = 0;
 	for (int i = stmt.args.size() - 1; i >= 0; i--) {
 		Id bb1 = B.newBB();
 		Loc loc = build(stmt.args[i], bb1);
@@ -238,6 +238,9 @@ Loc ToIR::build(const Expr &expr, Id endbb) {
 			B.setTerm(IRTerm::jmp(endbb));
 			return reg;
 		}
+
+		case Expr::CONVERT:
+			return build(*expr.e1, endbb);
 
 		default:
 			assert(false);

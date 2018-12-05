@@ -30,4 +30,4 @@ unordered_map<Loc, Alloc> regalloc(
 // Returns the amount the stack pointer has been decreased by at function
 // entry. This should be used to correctly replace argument references
 // afterwards.
-INT applyRegalloc(IFunc &ifunc, const unordered_map<Loc, Alloc> &allocation);
+i64 applyRegalloc(IFunc &ifunc, const unordered_map<Loc, Alloc> &allocation);

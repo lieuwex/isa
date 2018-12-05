@@ -10,7 +10,7 @@ static void skipWhite(string_view &s) {
 	s.remove_prefix(min(s.size(), s.find_first_not_of(" \n\t")));
 }
 
-static INT svtoI(string_view &s) {
+static i64 svtoI(string_view &s) {
 	skipWhite(s);
 	if (s.size() == 0) throw invalid_argument("Cannot parse number");
 
@@ -66,7 +66,7 @@ SExpr SExpr::parse(string_view source) {
 	return goParse(source);
 }
 
-SExpr::SExpr(INT number)
+SExpr::SExpr(i64 number)
 		: tag(NUMBER), number(number) {}
 
 SExpr::SExpr(const string &word)
@@ -127,11 +127,14 @@ ostream& operator<<(ostream &os, const SExpr &s) {
 
 static Type parseType(const SExpr &sexpr) {
 	if (sexpr.tag == SExpr::WORD) {
-		if (sexpr.word == "int") return Type::makeInt();
-		else if (sexpr.word == "i8") return Type::makeIntSized(8);
-		else if (sexpr.word == "i16") return Type::makeIntSized(16);
-		else if (sexpr.word == "i32") return Type::makeIntSized(32);
-		else if (sexpr.word == "i64") return Type::makeIntSized(64);
+		if (sexpr.word == "i8") return Type::makeInt(8);
+		else if (sexpr.word == "i16") return Type::makeInt(16);
+		else if (sexpr.word == "i32") return Type::makeInt(32);
+		else if (sexpr.word == "i64") return Type::makeInt(64);
+		else if (sexpr.word == "u8") return Type::makeUInt(8);
+		else if (sexpr.word == "u16") return Type::makeUInt(16);
+		else if (sexpr.word == "u32") return Type::makeUInt(32);
+		else if (sexpr.word == "u64") return Type::makeUInt(64);
 	} else if (sexpr.matchList({SExpr("array")})) {
 		if (sexpr.list.size() != 2) throw runtime_error("Invalid array type");
 		return Type::makeArray(parseType(sexpr.list[1]));

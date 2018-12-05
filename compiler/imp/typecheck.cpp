@@ -67,19 +67,15 @@ void TypeCheck::check(Program &program) {
 		}
 	}
 
+	functions.emplace("putchar", make_pair(Type::makeInt(0), vector<Type>({Type::makeInt(8)})));
+
 	for (Function &f : program.functions) {
-		TypeCheck().check(f);
+		check(f);
 	}
 }
 
 void TypeCheck::check(Function &func) {
 	enterScope();
-	vector<Type> argtypes;
-	for (const Decl &decl : func.args) {
-		addBinding(decl.name, decl.type);
-		argtypes.push_back(decl.type);
-	}
-	functions.emplace(func.name, make_pair(func.ret, argtypes));
 	currentFunction = func.name;
 	check(func.body);
 	leaveScope();

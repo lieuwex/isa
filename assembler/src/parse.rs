@@ -182,7 +182,7 @@ impl ParseContext {
                     return Err(ParseError {
                         description: String::from("no immediate value given"),
                         line_number,
-                    })
+                    });
                 }
                 Some(c) => c,
             };
@@ -218,40 +218,37 @@ impl ParseContext {
             line_number,
         };
 
+        macro_rules! map {
+            (@immediate: $val:expr) => {
+                res.immediate = get_imm!($val);
+            };
+            (@$name:ident: $val:expr) => {
+                res.$name = get_reg!($val);
+            };
+            ($( $name:ident: $val:expr ),*) => {
+                {
+                    let mut n = 0;
+                    $(
+                        res.$name;
+                        n += 1;
+                    )*
+                    assert_len!(n);
+
+                    $(map!(@$name: $val);)*
+                }
+            };
+        }
+
         // REVIEW: check if non decimal numbers are supported
         // match the parsed opcode to its configuration, then retrieve the correct
         // values for every field
         match res.opcode.configuration() {
-            Configuration::imm => {
-                assert_len!(1);
-                res.immediate = get_imm!(0);
-            }
-            Configuration::rd_imm => {
-                assert_len!(2);
-                res.rd = get_reg!(0);
-                res.immediate = get_imm!(1);
-            }
-            Configuration::r1_imm => {
-                assert_len!(2);
-                res.rs1 = get_reg!(0);
-                res.immediate = get_imm!(1);
-            }
-            Configuration::rd_r1_r2 => {
-                assert_len!(3);
-                res.rd = get_reg!(0);
-                res.rs1 = get_reg!(1);
-                res.rs2 = get_reg!(2);
-            }
-            Configuration::rd_r1 => {
-                assert_len!(2);
-                res.rd = get_reg!(0);
-                res.rs1 = get_reg!(1);
-            }
-            Configuration::r1_r2 => {
-                assert_len!(2);
-                res.rs1 = get_reg!(0);
-                res.rs2 = get_reg!(1);
-            }
+            Configuration::imm => map!(immediate: 0),
+            Configuration::rd_imm => map!(rd: 0, immediate: 1),
+            Configuration::r1_imm => map!(rs1: 0, immediate: 1),
+            Configuration::rd_r1_r2 => map!(rd: 0, rs1: 1, rs2: 2),
+            Configuration::rd_r1 => map!(rd: 0, rs1: 1),
+            Configuration::r1_r2 => map!(rs1: 0, rs2: 1),
         };
 
         self.n_instructions += 8;
@@ -300,5 +297,6 @@ pub fn parse(prog: &str) -> Vec<Result<InternalInstruction, ParseError>> {
         .map(|instr| match instr {
             Ok(x) => ctx.inline_labels(x.clone()),
             Err(e) => Err(e.clone()),
-        }).collect()
+        })
+        .collect()
 }

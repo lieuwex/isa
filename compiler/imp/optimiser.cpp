@@ -89,7 +89,9 @@ static void deadCode(IFunc &ifunc) {
 		reachable.insert(id);
 
 		for (Id n : ifunc.BBs[id].term.nexts()) {
-			q.push(n);
+			if (reachable.count(n) == 0) {
+				q.push(n);
+			}
 		}
 	}
 

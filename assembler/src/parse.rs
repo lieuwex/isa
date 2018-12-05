@@ -142,6 +142,16 @@ impl ParseContext {
             Ok(res) => res,
             Err(err) => return Some(Err(err)),
         };
+        macro_rules! assert_len {
+            ( $n:expr ) => {
+                if args.len() != $n {
+                    return Some(Err(ParseError {
+                        description: format!("expected {} arguments, got {}", $n, args.len()),
+                        line_number,
+                    }));
+                }
+            };
+        }
 
         let get_reg_num = |i: usize| -> Result<u8, num::ParseIntError> {
             let n: String = args[i].chars().skip(1).collect();
@@ -213,26 +223,32 @@ impl ParseContext {
         // values for every field
         match res.opcode.configuration() {
             Configuration::imm => {
+                assert_len!(1);
                 res.immediate = get_imm!(0);
             }
             Configuration::rd_imm => {
+                assert_len!(2);
                 res.rd = get_reg!(0);
                 res.immediate = get_imm!(1);
             }
             Configuration::r1_imm => {
+                assert_len!(2);
                 res.rs1 = get_reg!(0);
                 res.immediate = get_imm!(1);
             }
             Configuration::rd_r1_r2 => {
+                assert_len!(3);
                 res.rd = get_reg!(0);
                 res.rs1 = get_reg!(1);
                 res.rs2 = get_reg!(2);
             }
             Configuration::rd_r1 => {
+                assert_len!(2);
                 res.rd = get_reg!(0);
                 res.rs1 = get_reg!(1);
             }
             Configuration::r1_r2 => {
+                assert_len!(2);
                 res.rs1 = get_reg!(0);
                 res.rs2 = get_reg!(1);
             }

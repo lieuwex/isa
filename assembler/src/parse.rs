@@ -122,7 +122,7 @@ impl ParseContext {
         }
 
         // remove comments and trim the line, we only need code
-        let line = commentreg.replace_all(line, "").into_owned();
+        let line = commentreg.replace_all(line, "");
         let line = line.trim();
 
         // skip lines without code
@@ -133,8 +133,7 @@ impl ParseContext {
         // if this is a label declaration line, add the label to the labels map and skip
         // the current line
         if let Some(caps) = labelreg.captures(line) {
-            let label = &caps[1];
-            self.labels.insert(label.to_string(), self.n_instructions);
+            self.labels.insert(caps[1].to_string(), self.n_instructions);
             return None;
         }
 
@@ -259,7 +258,7 @@ impl ParseContext {
         &self,
         mut instr: InternalInstruction,
     ) -> Result<InternalInstruction, ParseError> {
-        let immediate = match instr.immediate {
+        let val = match instr.immediate {
             Immediate::LabelRef(ref labelname, labelloc) => {
                 match self.labels.get(labelname.as_str()) {
                     Some(instrloc) => instrloc - labelloc - 8,
@@ -273,8 +272,7 @@ impl ParseContext {
             }
             Immediate::Value(val) => val,
         };
-
-        instr.immediate = Immediate::Value(immediate);
+        instr.immediate = Immediate::Value(val);
         Ok(instr)
     }
 }

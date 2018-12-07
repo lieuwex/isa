@@ -1,4 +1,4 @@
-use opcode::*;
+use crate::opcode::*;
 
 #[derive(Debug, Clone, Copy)]
 pub struct Instruction {

@@ -1,9 +1,10 @@
-use instruction::*;
-use opcode::*;
+use crate::instruction::*;
+use crate::opcode::*;
+use crate::util::*;
+use lazy_static::lazy_static;
 use regex::Regex;
 use std::collections::HashMap;
 use std::{fmt, num};
-use util::*;
 
 #[derive(Debug, Clone)]
 pub struct ParseError {
@@ -11,7 +12,7 @@ pub struct ParseError {
     line_number: usize,
 }
 impl fmt::Display for ParseError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "parse error at line {}: {}",

@@ -1,15 +1,11 @@
-extern crate regex;
-#[macro_use]
-extern crate lazy_static;
-
 mod convert;
 mod instruction;
 mod opcode;
 mod parse;
 mod util;
 
-use convert::*;
-use parse::*;
+use crate::convert::*;
+use crate::parse::*;
 use std::env;
 use std::fs;
 use std::io::{self, Write};

@@ -4,7 +4,7 @@ mod instruction;
 mod memory;
 mod opcode;
 
-use cpu::*;
+use crate::cpu::*;
 use std::slice;
 use std::io::{self, Read};
 

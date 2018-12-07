@@ -1,7 +1,7 @@
-use registers::Registers;
-use instruction::*;
-use memory::Memory;
-use opcode::Opcode;
+use crate::registers::Registers;
+use crate::instruction::*;
+use crate::memory::Memory;
+use crate::opcode::Opcode;
 use std::mem::size_of_val;
 
 static END_MARKER: u64 = 0xCAFEBAAAABBEEEEE;

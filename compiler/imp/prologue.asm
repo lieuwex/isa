@@ -15,3 +15,8 @@ putchar:
 	add r15, r15, r13
 	mv r0, r14
 
+getchar:
+	li r13, 81
+	l16 r13, r13
+	mv r0, r14
+

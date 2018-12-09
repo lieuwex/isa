@@ -61,6 +61,9 @@ static void printASM(ostream &os, const IRIns &ins) {
 				case Arith::DIV: os << "\tdiv"; break;
 				case Arith::LT: os << "\tlt"; break;
 				case Arith::LTE: os << "\tlte"; break;
+				case Arith::SLL: os << "\tsll"; break;
+				case Arith::SLR: os << "\tslr"; break;
+				case Arith::SAR: os << "\tsar"; break;
 				default: assert(false);
 			}
 			os << " ";

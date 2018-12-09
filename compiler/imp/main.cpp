@@ -6,6 +6,7 @@
 #include "ir.h"
 #include "to_ir.h"
 #include "optimiser.h"
+#include "unmacro.h"
 #include "ir_order.h"
 #include "live_analysis.h"
 #include "regalloc.h"
@@ -49,6 +50,8 @@ int main(int argc, char **argv) {
 	cerr << ir << endl;
 
 	optimise(ir);
+
+	unmacro(ir);
 	cerr << ir << endl;
 
 	for (auto &p : ir.funcs) {

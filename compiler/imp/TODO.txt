@@ -1,3 +1,5 @@
 Instruction reg writes are performed after all reg reads, so a in the following, r2 and r3 should be allowed equal hreg allocations: (assuming r2 and r3 are otherwise unused)
 	add r2, r0, r1
 	add r3, r2, r0
+
+If a function takes 0 arguments, don't do the RSP dance

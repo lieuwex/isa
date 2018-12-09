@@ -16,6 +16,7 @@ static i64 svtoI(string_view &s) {
 
 	bool neg = false;
 	if (s[0] == '-') {
+		if (s.size() == 1 || !isdigit(s[1])) throw invalid_argument("Cannot parse number");
 		s.remove_prefix(1);
 		neg = true;
 	}

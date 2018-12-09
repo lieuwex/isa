@@ -68,6 +68,7 @@ void TypeCheck::check(Program &program) {
 	}
 
 	functions.emplace("putchar", make_pair(Type::makeInt(0), vector<Type>({Type::makeUInt(8)})));
+	functions.emplace("getchar", make_pair(Type::makeInt(16), vector<Type>()));
 
 	for (Function &f : program.functions) {
 		check(f);

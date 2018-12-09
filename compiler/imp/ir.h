@@ -59,6 +59,9 @@ enum class Arith {
 	DIV,
 	LT,
 	LTE,
+	SLL,
+	SLR,
+	SAR,
 };
 
 class IRIns {

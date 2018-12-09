@@ -2,7 +2,7 @@ use std::num;
 use std::result::Result;
 
 pub fn parse_number(s: &str) -> Result<i64, num::ParseIntError> {
-    let (s, sign) = if s.starts_with("-") {
+    let (s, sign) = if s.starts_with('-') {
         (&s[1..], -1)
     } else {
         (s, 1)

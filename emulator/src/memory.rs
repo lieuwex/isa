@@ -1,3 +1,4 @@
+use std::io::{self, Read};
 use std::mem;
 
 pub struct Memory {
@@ -6,7 +7,15 @@ pub struct Memory {
 
 impl Memory {
     pub fn read_data<T: Copy>(&self, addr: usize) -> Option<T> {
-        if addr >= self.data.len() {
+        if addr == 81 {
+            let mut buf = [0; 1];
+            let n = io::stdin().read(&mut buf).unwrap();
+            let c = if n == 0 { u64::max_value() } else { buf[0] as u64 };
+            let val: T = unsafe {
+                mem::transmute_copy::<u64, T>(&c)
+            };
+            return Some(val);
+        } else if addr >= self.data.len() {
             return None;
         }
 

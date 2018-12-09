@@ -169,7 +169,7 @@ void ToIR::buildCall(const Stmt &stmt, Id endbb, bool hasRet) {
 	B.add(IRIns::arith(Arith::ADD, Loc::reg(RSP), Loc::reg(RSP), sizereg));
 
 	if (hasRet) {
-		Loc loc = lookup(stmt.decl.name);
+		Loc loc = lookup(stmt.target);
 		if (loc.tag == -1) throw runtime_error("Call asg to undefined variable");
 
 		B.add(IRIns::mov(loc, Loc::reg(RRET)));

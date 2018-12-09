@@ -1,0 +1,6 @@
+*.bin
+*.o
+*.dSYM
+imp
+prologue.asm.cpp
+epilogue.asm.cpp

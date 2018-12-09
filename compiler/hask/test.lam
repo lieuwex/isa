@@ -1,0 +1,12 @@
+-- def f = \x -> x + 1 * 2
+
+-- def main =
+--         print 1
+--      >> print 2
+--      >> print 3
+
+def kaas = 42
+
+def lam = \x -> x + 1
+
+def main = 1

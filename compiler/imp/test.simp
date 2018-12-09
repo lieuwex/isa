@@ -1,0 +1,15 @@
+(imp
+  (func f ((a i64)) i64
+		(do
+		  (decl (x i64) (+ 1 2))
+		  (asg x (* 2 (+ x a)))
+		  (return x)))
+
+  (func main () i64
+		(do
+		  (decl (x i64) (+ 1 2))
+		  (callr x f ((* x 3)))
+		  (call putchar ((cast u8 104)))
+		  (call putchar ((cast u8 111)))
+		  (call putchar ((cast u8 105)))
+		  (call putchar ((cast u8 10))))))

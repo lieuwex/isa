@@ -1,0 +1,9 @@
+(imp
+  (func main () i64
+        (do
+          (decl (x u8) (cast u8 97))
+          (while (< (cast i8 x) (+ 97 26))
+                 (do
+                   (call putchar (x))
+                   (asg x (+ x (cast u8 1)))))
+          (call putchar ((cast u8 10))))))

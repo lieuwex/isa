@@ -1,0 +1,9 @@
+(imp
+  (func main () i64
+        (do
+          (decl (x i16) (cast i16 0))
+          (callr x getchar ())
+          (while (< -1 x)
+                 (do
+                   (call putchar ((cast u8 x)))
+                   (callr x getchar ()))))))

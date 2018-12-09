@@ -57,15 +57,16 @@ unordered_map<Loc, Alloc> regalloc(
 
 	for (const Ival &ival : ivs) {
 		// Expire old intervals
-		for (size_t k = 0; k < active.size(); k++) {
+		size_t k;
+		for (k = 0; k < active.size(); k++) {
 			const Ival &j = active[k];
 			if (j.interval.to >= ival.interval.from) {
-				active.erase(active.begin(), active.begin() + k);
 				break;
 			}
 			assert(allocation[j.loc].tag == Alloc::HREG);
 			available.push(allocation[j.loc].hreg);
 		}
+		active.erase(active.begin(), active.begin() + k);
 
 		if (available.size() == 0) {
 			// Spill at interval

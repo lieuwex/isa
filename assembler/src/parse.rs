@@ -41,7 +41,7 @@ struct Tokenizer {
 }
 
 fn is_word_char(c: char) -> bool {
-    c.is_alphanumeric() || c == '_'
+    c.is_alphanumeric() || c == '_' || c == '-'
 }
 
 impl Tokenizer {
@@ -188,7 +188,7 @@ impl ParseContext {
                 Some(c) => c,
             };
 
-            let res = if c.is_digit(10) {
+            let res = if c.is_digit(10) || c == '-' {
                 let n = match parse_number(r2) {
                     Ok(n) => n,
                     Err(_) => return Err(err_int_parse(line_number)),

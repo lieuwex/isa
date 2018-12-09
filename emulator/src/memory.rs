@@ -1,4 +1,4 @@
-use std::io::{self, Read};
+use std::io::{self, Read, Write};
 use std::mem;
 
 pub struct Memory {
@@ -32,8 +32,8 @@ impl Memory {
             let c: u8 = unsafe {
                 mem::transmute_copy::<T, u8>(&val)
             };
-            print!("{}", c as char);
-            return true;
+            let cbuf = [c; 1];
+            return io::stdout().write_all(&cbuf).is_ok();
         } else if addr >= self.data.len() ||
                     addr + mem::size_of::<T>() - 1 >= self.data.len() {
             return false;

@@ -13,17 +13,17 @@ A value of type (array T) is created using the intrinsic expression (array
 of the array.
 
 A value of type (slice T) is created using the intrinsic expression (slice
-<array> <start> <length>), where <array> is an array-valued expression and
-<start> and <length> are integer-valued expressions. The slice object represents
-the specified subarray of the given array.
+<array> <start> <length>), where <array> is an array- or slice-valued expression
+and <start> and <length> are integer-valued expressions. The slice object
+represents the specified subarray of the given array.
 
 A slice contains a reference to the array it was constructed with, and should
 not outlive its lifetime.
 
 An element of an array or slice value is accessed using the intrinsic expression
-(at <obj> <idx>), where <obj> is either an array- or a slice-valued expression
-and <idx> is an integer-valued expression signifying the requested index into
-the sequence.
+(at <obj> <idx>), where <obj> is either of type (array T) or (slice T) and <idx>
+is an integer-valued expression signifying the requested index into the
+sequence.
 
 An element of an array or slice value is modified using the intrinsic expression
 (set-at <obj> <idx> <value>), where <obj> is either of type (array T) or (slice

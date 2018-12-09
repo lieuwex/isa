@@ -37,6 +37,7 @@ public:
 	static Type makeArray(const Type &contained);
 	static Type maxType(const Type &a, const Type &b);
 
+	bool isIntegral() const;
 	int size() const;
 	Type growInt() const;
 
@@ -66,6 +67,7 @@ public:
 		DIVIDE,     // e1, e2
 		LESS,       // e1, e2
 		LESSEQUAL,  // e1, e2
+		CAST,       // e1, type
 
 		CONVERT,    // e1, type
 	};
@@ -86,6 +88,7 @@ public:
 	Expr(const string &variable);
 	Expr(int tag, unique_ptr<Expr> &&e1, unique_ptr<Expr> &&e2);
 
+	static Expr makeCast(unique_ptr<Expr> &&e1, const Type &type);
 	static Expr makeConvert(unique_ptr<Expr> &&e1, const Type &type);
 
 	void writeProlog(ostream &os) const;

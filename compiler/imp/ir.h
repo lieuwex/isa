@@ -71,6 +71,7 @@ public:
 		LOAD,   // rd, [r1], size
 		ARITH,  // op, rd, r1, r2
 		CALL,   // name
+		SEXT,   // rd, r1, sizeto, sizefrom
 	};
 
 	int tag = -1;
@@ -78,6 +79,7 @@ public:
 	Loc rd, r1, r2;
 	i64 number = 0;
 	int size = -1;
+	int sizeto = -1, sizefrom = -1;
 	string name;
 
 	static IRIns nop();
@@ -87,6 +89,7 @@ public:
 	static IRIns load(Loc rd, Loc r1, int size);
 	static IRIns arith(Arith op, Loc rd, Loc r1, Loc r2);
 	static IRIns call(const string &name);
+	static IRIns signExtend(Loc rd, Loc r1, int sizeto, int sizefrom);
 
 	set<Loc> written() const;
 	set<Loc> read() const;

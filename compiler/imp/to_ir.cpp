@@ -60,7 +60,7 @@ void ToIR::build(const Function &function) {
 
 	for (size_t i = 0; i < function.args.size(); i++) {
 		Loc reg = B.genReg();
-		B.add(IRIns::load(reg, Loc::arg(i), 8));  // TODO: sizes?
+		B.add(IRIns::load(reg, Loc::arg(i), function.args[i].type.size()));
 		setLoc(function.args[i].name, reg);
 	}
 
@@ -151,26 +151,21 @@ void ToIR::buildDo(const Stmt &stmt, Id endbb) {
 }
 
 void ToIR::buildCall(const Stmt &stmt, Id endbb, bool hasRet) {
-	i64 sizesum = 0;
 	for (int i = stmt.args.size() - 1; i >= 0; i--) {
 		Id bb1 = B.newBB();
 		Loc loc = build(stmt.args[i], bb1);
-
-		// TODO: sizes?
 
 		B.switchBB(bb1);
 		Loc roff = B.genReg();
 		B.add(IRIns::li(roff, 8));
 		B.add(IRIns::arith(Arith::SUB, Loc::reg(RSP), Loc::reg(RSP), roff));
-		B.add(IRIns::store(Loc::reg(RSP), loc, 8));
-
-		sizesum += 8;
+		B.add(IRIns::store(Loc::reg(RSP), loc, stmt.args[i].restype.size()));
 	}
 
 	B.add(IRIns::call(stmt.name));
 
 	Loc sizereg = B.genReg();
-	B.add(IRIns::li(sizereg, sizesum));
+	B.add(IRIns::li(sizereg, 8 * stmt.args.size()));
 	B.add(IRIns::arith(Arith::ADD, Loc::reg(RSP), Loc::reg(RSP), sizereg));
 
 	if (hasRet) {
@@ -221,6 +216,13 @@ Loc ToIR::build(const Expr &expr, Id endbb) {
 			Id bb2 = B.newBB();
 			Loc l2 = build(*expr.e2, bb2);
 
+			assert(expr.e1->restype.tag == expr.e2->restype.tag);
+			if (expr.e1->restype.tag == Type::UINT) {
+				if (expr.tag != Expr::PLUS && expr.tag != Expr::MINUS) {
+					throw runtime_error("Unsupported arithmetic operation on unsigned operands");
+				}
+			}
+
 			B.switchBB(bb2);
 			Arith op;
 			switch (expr.tag) {
@@ -239,8 +241,29 @@ Loc ToIR::build(const Expr &expr, Id endbb) {
 			return reg;
 		}
 
-		case Expr::CONVERT:
-			return build(*expr.e1, endbb);
+		case Expr::CONVERT: {
+			Id bb1 = B.newBB();
+			Loc loc = build(*expr.e1, bb1);
+			B.switchBB(bb1);
+			Loc resloc;
+
+			if (expr.type == expr.e1->restype) {
+				resloc = loc;
+			} else if (expr.type.isIntegral() && expr.e1->restype.isIntegral()) {
+				if (expr.type.tag == Type::INT && expr.e1->restype.tag == Type::INT &&
+						expr.type.bits >= expr.e1->restype.bits) {
+					resloc = B.genReg();
+					B.add(IRIns::signExtend(resloc, loc, expr.type.bits, expr.e1->restype.bits));
+				} else {
+					resloc = loc;
+				}
+			} else {
+				throw runtime_error("Cannot convert between incompatible types");
+			}
+
+			B.setTerm(IRTerm::jmp(endbb));
+			return resloc;
+		}
 
 		default:
 			assert(false);

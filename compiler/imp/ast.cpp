@@ -71,6 +71,10 @@ Type Type::maxType(const Type &a, const Type &b) {
 	throw runtime_error("Cannot compute maximum type of incompatible types");
 }
 
+bool Type::isIntegral() const {
+	return tag == INT || tag == UINT;
+}
+
 int Type::size() const {
 	switch (tag) {
 		case INT:
@@ -116,6 +120,12 @@ Expr::Expr(const string &variable)
 
 Expr::Expr(int tag, unique_ptr<Expr> &&e1, unique_ptr<Expr> &&e2)
 		: tag(tag), e1(move(e1)), e2(move(e2)) {}
+
+Expr Expr::makeCast(unique_ptr<Expr> &&e1, const Type &type) {
+	Expr e = Expr(CAST, move(e1), unique_ptr<Expr>());
+	e.type = type;
+	return e;
+}
 
 Expr Expr::makeConvert(unique_ptr<Expr> &&e1, const Type &type) {
 	Expr e = Expr(CONVERT, move(e1), unique_ptr<Expr>());

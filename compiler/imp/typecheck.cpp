@@ -67,7 +67,7 @@ void TypeCheck::check(Program &program) {
 		}
 	}
 
-	functions.emplace("putchar", make_pair(Type::makeInt(0), vector<Type>({Type::makeInt(8)})));
+	functions.emplace("putchar", make_pair(Type::makeInt(0), vector<Type>({Type::makeUInt(8)})));
 
 	for (Function &f : program.functions) {
 		check(f);
@@ -118,8 +118,8 @@ void TypeCheck::check(Stmt &stmt) {
 
 		case Stmt::IF:
 			check(stmt.expr);
-			possiblyCoerceInt(stmt.expr, Type::makeInt(1));
-			if (stmt.expr.restype != Type::makeInt(1)) {
+			possiblyCoerceInt(stmt.expr, Type::makeUInt(1));
+			if (stmt.expr.restype != Type::makeUInt(1)) {
 				throw runtime_error("Invalid type in if condition");
 			}
 			enterScope(); check(stmt.ch[0]); leaveScope();
@@ -128,8 +128,8 @@ void TypeCheck::check(Stmt &stmt) {
 
 		case Stmt::WHILE:
 			check(stmt.expr);
-			possiblyCoerceInt(stmt.expr, Type::makeInt(1));
-			if (stmt.expr.restype != Type::makeInt(1)) {
+			possiblyCoerceInt(stmt.expr, Type::makeUInt(1));
+			if (stmt.expr.restype != Type::makeUInt(1)) {
 				throw runtime_error("Invalid type in while condition");
 			}
 			enterScope(); check(stmt.ch[0]); leaveScope();
@@ -222,13 +222,20 @@ void TypeCheck::check(Expr &expr) {
 			} else {
 				throw runtime_error("Invalid types in binary arithmetic operator");
 			}
-			if (expr.mintype != expr.e1->mintype) {
-				Expr e = Expr::makeConvert(move(expr.e1), expr.mintype);
+
+			if (expr.e1->restype != expr.restype) {
+				assert(expr.e1->restype.bits <= expr.restype.bits);
+				Expr e = Expr::makeConvert(move(expr.e1), expr.restype);
 				expr.e1 = make_unique<Expr>(move(e));
+				expr.e1->restype = expr.restype;
+				expr.e1->mintype = expr.restype;
 			}
-			if (expr.mintype != expr.e2->mintype) {
-				Expr e = Expr::makeConvert(move(expr.e2), expr.mintype);
+			if (expr.e2->restype != expr.restype) {
+				assert(expr.e2->restype.bits <= expr.restype.bits);
+				Expr e = Expr::makeConvert(move(expr.e2), expr.restype);
 				expr.e2 = make_unique<Expr>(move(e));
+				expr.e2->restype = expr.restype;
+				expr.e2->mintype = expr.restype;
 			}
 			break;
 
@@ -236,12 +243,25 @@ void TypeCheck::check(Expr &expr) {
 		case Expr::LESSEQUAL:
 			check(*expr.e1);
 			check(*expr.e2);
-			if (expr.e1->restype.tag == expr.e2->restype.tag &&
-					(expr.e1->restype.tag == Type::INT || expr.e1->restype.tag == Type::UINT)) {
-				expr.restype = Type::makeInt(1);
-				expr.mintype = Type::makeInt(1);
+			if (expr.e1->restype.tag == expr.e2->restype.tag && expr.e1->restype.isIntegral()) {
+				expr.restype = Type::makeUInt(1);
+				expr.mintype = Type::makeUInt(1);
 			} else {
 				throw runtime_error("Invalid types in binary comparison operator");
+			}
+			break;
+
+		case Expr::CAST:
+			check(*expr.e1);
+			if (expr.e1->restype == expr.type) {
+				expr.restype = expr.e1->restype;
+				expr.mintype = expr.e1->mintype;
+			} else if (expr.type.isIntegral() && expr.e1->restype.isIntegral()) {
+				expr = Expr::makeConvert(move(expr.e1), expr.type);
+				expr.restype = expr.type;
+				expr.mintype = expr.type;
+			} else {
+				throw runtime_error("Invalid types in cast");
 			}
 			break;
 

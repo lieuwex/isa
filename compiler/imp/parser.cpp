@@ -165,21 +165,28 @@ static Expr parseExpr(const SExpr &sexpr) {
 
 		case SExpr::LIST:
 			if (sexpr.list.size() == 3) {
-				int tag;
+				if (sexpr.list[0] == SExpr("cast")) {
+					return Expr::makeCast(
+							make_unique<Expr>(parseExpr(sexpr.list[2])),
+							parseType(sexpr.list[1]));
+				}
+
+				int tag = -1;
 				if (sexpr.list[0] == SExpr("+")) tag = Expr::PLUS;
 				else if (sexpr.list[0] == SExpr("-")) tag = Expr::MINUS;
 				else if (sexpr.list[0] == SExpr("*")) tag = Expr::TIMES;
 				else if (sexpr.list[0] == SExpr("/")) tag = Expr::DIVIDE;
 				else if (sexpr.list[0] == SExpr("<")) tag = Expr::LESS;
 				else if (sexpr.list[0] == SExpr("<=")) tag = Expr::LESSEQUAL;
-				else throw runtime_error("Invalid expr operator");
 
-				return Expr(tag,
-						make_unique<Expr>(parseExpr(sexpr.list[1])),
-						make_unique<Expr>(parseExpr(sexpr.list[2])));
-			} else {
-				throw runtime_error("Invalid expr term");
+				if (tag != -1) {
+					return Expr(tag,
+							make_unique<Expr>(parseExpr(sexpr.list[1])),
+							make_unique<Expr>(parseExpr(sexpr.list[2])));
+				}
 			}
+
+			throw runtime_error("Invalid expr term");
 
 		default:
 			assert(false);

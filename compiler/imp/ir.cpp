@@ -64,6 +64,16 @@ IRIns IRIns::call(const string &name) {
 	return ins;
 }
 
+IRIns IRIns::signExtend(Loc rd, Loc r1, int sizeto, int sizefrom) {
+	IRIns ins;
+	ins.tag = SEXT;
+	ins.rd = rd;
+	ins.r1 = r1;
+	ins.sizeto = sizeto;
+	ins.sizefrom = sizefrom;
+	return ins;
+}
+
 set<Loc> IRIns::written() const {
 	switch (tag) {
 		case NOP: return {};
@@ -73,6 +83,7 @@ set<Loc> IRIns::written() const {
 		case LOAD: return {rd};
 		case ARITH: return {rd};
 		case CALL: return {};
+		case SEXT: return {rd};
 		default: assert(false);
 	}
 }
@@ -86,6 +97,7 @@ set<Loc> IRIns::read() const {
 		case LOAD: return {r1};
 		case ARITH: return {r1, r2};
 		case CALL: return {};
+		case SEXT: return {r1};
 		default: assert(false);
 	}
 }
@@ -99,6 +111,7 @@ void IRIns::forEachRead(function<void(Loc&)> f) {
 		case LOAD: f(r1); break;
 		case ARITH: f(r1); f(r2); break;
 		case CALL: break;
+		case SEXT: f(r1); break;
 		default: assert(false);
 	}
 }
@@ -112,6 +125,7 @@ void IRIns::forEachWrite(function<void(Loc&)> f) {
 		case LOAD: f(rd); break;
 		case ARITH: f(rd); break;
 		case CALL: break;
+		case SEXT: f(rd); break;
 		default: assert(false);
 	}
 }
@@ -272,6 +286,9 @@ ostream& operator<<(ostream &os, const IRIns &ins) {
 
 		case IRIns::CALL:
 			return os << "call " << ins.name;
+
+		case IRIns::SEXT:
+			return os << "sext" << ins.sizeto << "." << ins.sizefrom << " " << ins.rd << ", " << ins.r1;
 
 		default:
 			assert(false);

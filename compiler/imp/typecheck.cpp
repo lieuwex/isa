@@ -77,6 +77,11 @@ void TypeCheck::check(Program &program) {
 void TypeCheck::check(Function &func) {
 	enterScope();
 	currentFunction = func.name;
+
+	for (const Decl &decl : func.args) {
+		addBinding(decl.name, decl.type);
+	}
+
 	check(func.body);
 	leaveScope();
 }

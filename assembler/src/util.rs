@@ -11,7 +11,7 @@ pub fn parse_number(s: &str) -> Result<i64, num::ParseIntError> {
     let n = if s.starts_with("0x") {
         i64::from_str_radix(&s[2..], 16)
     } else if s.starts_with("0b") {
-        i64::from_str_radix(&s[2..], 8)
+        i64::from_str_radix(&s[2..], 2)
     } else {
         i64::from_str_radix(s, 10)
     };

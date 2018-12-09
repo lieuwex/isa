@@ -135,12 +135,12 @@ impl CPU {
         true
     }
 
-    pub fn execute(&mut self, instr: Instruction) {
+    pub fn execute(&mut self, instr: &Instruction) {
         let mut done = false;
-        if !done { done = self.arithmatic(&instr); }
-        if !done { done = self.jumps(&instr); }
-        if !done { done = self.loads(&instr); }
-        if !done { done = self.stores(&instr); }
+        if !done { done = self.arithmatic(instr); }
+        if !done { done = self.jumps(instr); }
+        if !done { done = self.loads(instr); }
+        if !done { done = self.stores(instr); }
 
         if !done && instr.opcode == Opcode::mv {
             let val = self.regs.get(instr.rs1 as usize);
@@ -163,7 +163,7 @@ impl CPU {
 
             let instr = self.get_instruction()?;
             self.inc_pc();
-            self.execute(instr);
+            self.execute(&instr);
             //self.regs.print();
         }
 

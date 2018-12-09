@@ -10,7 +10,7 @@ impl Memory {
         if addr == 81 {
             let mut buf = [0; 1];
             let n = io::stdin().read(&mut buf).unwrap();
-            let c = if n == 0 { u64::max_value() } else { buf[0] as u64 };
+            let c = if n == 0 { u64::max_value() } else { u64::from(buf[0]) };
             let val: T = unsafe {
                 mem::transmute_copy::<u64, T>(&c)
             };

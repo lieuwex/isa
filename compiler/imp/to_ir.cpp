@@ -198,7 +198,7 @@ Loc ToIR::build(const Expr &expr, Id endbb) {
 
 		case Expr::VARIABLE: {
 			Loc loc = lookup(expr.variable);
-			if (loc.tag == -1) throw runtime_error("Use of undeclared variable");
+			if (loc.tag == -1) throw runtime_error("IR: Use of undeclared variable");
 			B.setTerm(IRTerm::jmp(endbb));
 			return loc;
 		}

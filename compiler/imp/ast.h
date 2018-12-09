@@ -80,7 +80,8 @@ public:
 
 	// The type of the expression, annotated by the type checker
 	Type restype;
-	// The smallest type necessary to store the result, annotated by the type checker
+	// The smallest type necessary to store the result, annotated and used
+	// internally by the type checker
 	Type mintype;
 
 	Expr() = default;

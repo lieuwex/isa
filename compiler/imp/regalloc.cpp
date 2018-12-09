@@ -130,16 +130,13 @@ static void applyRegalloc(
 		const unordered_map<Loc, Alloc> &allocation,
 		const unordered_map<Loc, i64> &spillOffset) {
 
-	// TODO: update Loc::ARG references after incorporating offset
-	// from added prefix instructions
-
 	for (size_t i = 0; i < bb.inss.size(); i++) {
 		IRIns &ins = bb.inss[i];
 
 		vector<IRIns> prefix, suffix;
 
 		vector<Loc> available = {Loc::reg(RRET), Loc::reg(RLINK)};
-		ins.forEachRead([&](Loc &loc) {
+		ins.forEachRead([&available, &prefix, &allocation, &spillOffset](Loc &loc) {
 			if (!isIRReg(loc)) return;
 			const Alloc &alloc = allocation.find(loc)->second;
 			if (alloc.tag == Alloc::SPILL) {
@@ -149,7 +146,7 @@ static void applyRegalloc(
 				i64 offset = spillOffset.find(loc)->second;
 				prefix.push_back(IRIns::li(reg, offset));
 				prefix.push_back(IRIns::arith(Arith::ADD, reg, Loc::reg(RSP), reg));
-				prefix.push_back(IRIns::load(reg, reg, 8));  // TODO: sizes?
+				prefix.push_back(IRIns::load(reg, reg, 8));
 
 				loc.n = reg.n;
 			} else {
@@ -158,7 +155,7 @@ static void applyRegalloc(
 		});
 
 		available = {Loc::reg(RRET), Loc::reg(RLINK)};
-		ins.forEachWrite([&](Loc &loc) {
+		ins.forEachWrite([&available, &suffix, &allocation, &spillOffset](Loc &loc) {
 			if (!isIRReg(loc)) return;
 			const Alloc &alloc = allocation.find(loc)->second;
 			if (alloc.tag == Alloc::SPILL) {
@@ -169,7 +166,7 @@ static void applyRegalloc(
 				i64 offset = spillOffset.find(loc)->second;
 				suffix.push_back(IRIns::li(ptrreg, offset));
 				suffix.push_back(IRIns::arith(Arith::ADD, ptrreg, Loc::reg(RSP), ptrreg));
-				suffix.push_back(IRIns::store(ptrreg, reg, 8));  // TODO: sizes?
+				suffix.push_back(IRIns::store(ptrreg, reg, 8));
 
 				loc.n = reg.n;
 			} else {
@@ -197,7 +194,7 @@ static void applyRegalloc(
 			i64 offset = spillOffset.find(loc)->second;
 			prefix.push_back(IRIns::li(reg, offset));
 			prefix.push_back(IRIns::arith(Arith::ADD, reg, Loc::reg(RSP), reg));
-			prefix.push_back(IRIns::load(reg, reg, 8));  // TODO: sizes?
+			prefix.push_back(IRIns::load(reg, reg, 8));
 
 			loc.n = reg.n;
 		} else {

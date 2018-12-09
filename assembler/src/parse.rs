@@ -16,7 +16,8 @@ impl fmt::Display for ParseError {
         write!(
             f,
             "parse error at line {}: {}",
-            self.line_number, self.description
+            self.line_number + 1,
+            self.description
         )
     }
 }

@@ -16,7 +16,7 @@ impl Memory {
             };
             return Some(val);
         } else if addr >= self.data.len() ||
-                    addr + mem::size_of::<T>() - 1 >= self.data.len() {
+                    addr + mem::size_of::<T>() > self.data.len() {
             return None;
         }
 
@@ -35,7 +35,7 @@ impl Memory {
             let cbuf = [c; 1];
             return io::stdout().write_all(&cbuf).is_ok();
         } else if addr >= self.data.len() ||
-                    addr + mem::size_of::<T>() - 1 >= self.data.len() {
+                    addr + mem::size_of::<T>() > self.data.len() {
             return false;
         }
 

@@ -15,7 +15,8 @@ impl Memory {
                 mem::transmute_copy::<u64, T>(&c)
             };
             return Some(val);
-        } else if addr >= self.data.len() {
+        } else if addr >= self.data.len() ||
+                    addr + mem::size_of::<T>() - 1 >= self.data.len() {
             return None;
         }
 
@@ -33,7 +34,8 @@ impl Memory {
             };
             print!("{}", c as char);
             return true;
-        } else if addr >= self.data.len() {
+        } else if addr >= self.data.len() ||
+                    addr + mem::size_of::<T>() - 1 >= self.data.len() {
             return false;
         }
 

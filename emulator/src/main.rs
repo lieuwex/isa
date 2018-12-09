@@ -6,11 +6,15 @@ mod opcode;
 
 use crate::cpu::*;
 use std::slice;
-use std::io::{self, Read};
+use std::env;
+use std::fs;
+use std::io;
 
 fn main() -> Result<(), io::Error> {
-    let mut bytes: Vec<u8> = vec![];
-    io::stdin().read_to_end(&mut bytes)?;
+    let args: Vec<String> = env::args().collect();
+    let fname = &args[1];
+
+    let bytes = fs::read(fname)?;
 
     let prog: &[u64] = unsafe {
         let ptr = bytes.as_ptr() as *const u64;

@@ -50,9 +50,9 @@ impl CPU {
             Opcode::and => a & b,
             Opcode::or => a | b,
             Opcode::xor => a ^ b,
-            Opcode::sll => a << b,
-            Opcode::slr => a >> b,
-            Opcode::sar => a >> b, // TODO
+            Opcode::sll => a.wrapping_shl(b as u32),
+            Opcode::slr => (a as u64).wrapping_shr(b as u32) as i64,
+            Opcode::sar => a.wrapping_shr(b as u32),
             Opcode::lt => (a < b) as i64,
             Opcode::lte => (a <= b) as i64,
 

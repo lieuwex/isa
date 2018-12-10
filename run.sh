@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 
 cd ./assembler
 cargo build
@@ -8,4 +8,4 @@ cd ./emulator
 cargo build
 cd ..
 
-./assembler/target/debug/assembler $1 | ./emulator/target/debug/emulator
+./emulator/target/debug/emulator <(./assembler/target/debug/assembler $1)

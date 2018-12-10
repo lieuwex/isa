@@ -1,3 +1,6 @@
+#![allow(clippy::unreadable_literal)]
+#![warn(clippy::cast_ptr_alignment)]
+
 mod cpu;
 mod registers;
 mod instruction;

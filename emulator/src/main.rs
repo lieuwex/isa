@@ -2,16 +2,13 @@
 #![warn(clippy::cast_ptr_alignment)]
 
 mod cpu;
-mod registers;
 mod instruction;
 mod memory;
 mod opcode;
+mod registers;
 
 use crate::cpu::*;
-use std::slice;
-use std::env;
-use std::fs;
-use std::io;
+use std::{env, fs, io, slice};
 
 fn main() -> Result<(), io::Error> {
     let args: Vec<String> = env::args().collect();

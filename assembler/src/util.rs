@@ -1,5 +1,4 @@
-use std::num;
-use std::result::Result;
+use std::{num, result::Result};
 
 pub fn parse_number(s: &str) -> Result<i64, num::ParseIntError> {
     let (s, sign) = if s.starts_with('-') {
@@ -8,13 +7,13 @@ pub fn parse_number(s: &str) -> Result<i64, num::ParseIntError> {
         (s, 1)
     };
 
-    let n = if s.starts_with("0x") {
-        i64::from_str_radix(&s[2..], 16)
+    let (s, radix) = if s.starts_with("0x") {
+        (&s[2..], 16)
     } else if s.starts_with("0b") {
-        i64::from_str_radix(&s[2..], 2)
+        (&s[2..], 2)
     } else {
-        i64::from_str_radix(s, 10)
+        (s, 10)
     };
 
-    n.map(|n| n * sign)
+    i64::from_str_radix(s, radix).map(|n| n * sign)
 }

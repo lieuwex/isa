@@ -1,7 +1,4 @@
-use crate::registers::Registers;
-use crate::instruction::*;
-use crate::memory::Memory;
-use crate::opcode::Opcode;
+use crate::{instruction::*, memory::Memory, opcode::Opcode, registers::Registers};
 use std::mem::size_of_val;
 
 static END_MARKER: u64 = 0xCAFEBAAAABBEEEEE;
@@ -104,15 +101,15 @@ impl CPU {
             Opcode::l16 => {
                 let raw: u16 = self.mem.read_data(loc).unwrap();
                 sign_extend(u64::from(raw), 16)
-            },
+            }
             Opcode::l32 => {
                 let raw: u32 = self.mem.read_data(loc).unwrap();
                 sign_extend(u64::from(raw), 32)
-            },
+            }
             Opcode::l64 => {
                 let raw: u64 = self.mem.read_data(loc).unwrap();
                 sign_extend(raw, 64)
-            },
+            }
 
             _ => return false,
         });

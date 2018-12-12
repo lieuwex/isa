@@ -1,10 +1,7 @@
-use crate::instruction::*;
-use crate::opcode::*;
-use crate::util::*;
+use crate::{instruction::*, opcode::*, util::*};
 use lazy_static::lazy_static;
 use regex::Regex;
-use std::collections::HashMap;
-use std::{fmt, num};
+use std::{collections::HashMap, fmt, num};
 
 #[derive(Debug, Clone)]
 pub struct ParseError {
@@ -71,7 +68,7 @@ impl Tokenizer {
 
     pub fn tokenize(&mut self, line_number: usize) -> Result<(String, Vec<String>), ParseError> {
         macro_rules! non_empty {
-            ( $w:expr, $e:expr ) => {
+            ($w:expr, $e:expr) => {
                 if $w.is_empty() {
                     return Err(ParseError {
                         description: String::from($e),
@@ -144,7 +141,7 @@ impl ParseContext {
             Err(err) => return Some(Err(err)),
         };
         macro_rules! assert_len {
-            ( $n:expr ) => {
+            ($n:expr) => {
                 if args.len() != $n {
                     return Some(Err(ParseError {
                         description: format!("expected {} arguments, got {}", $n, args.len()),
@@ -163,7 +160,7 @@ impl ParseContext {
             }
         };
         macro_rules! get_reg {
-            ( $e:expr ) => {
+            ($e:expr) => {
                 match get_reg_num($e) {
                     Ok(x) => x,
                     Err(_) => return Some(Err(err_int_parse(line_number))),
@@ -200,7 +197,7 @@ impl ParseContext {
             Ok(res)
         };
         macro_rules! get_imm {
-            ( $e: expr ) => {
+            ($e:expr) => {
                 match get_immediate($e) {
                     Ok(x) => x,
                     Err(e) => return Some(Err(e)),

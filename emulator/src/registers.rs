@@ -22,8 +22,6 @@ impl Registers {
     }
 
     pub fn new() -> Self {
-        Self {
-            regs: [0; 16],
-        }
+        Self { regs: [0; 16] }
     }
 }

@@ -32,7 +32,6 @@ pub enum Opcode {
     unknown,
 }
 
-
 pub fn u8_to_opcode(opcode: u8) -> Opcode {
     match opcode {
         0b0000000 => Opcode::li,

@@ -4,13 +4,14 @@ mod opcode;
 mod parse;
 mod util;
 
-use crate::convert::*;
-use crate::parse::*;
-use std::env;
-use std::fs;
-use std::io::{self, Write};
-use std::mem::transmute;
-use std::process::exit;
+use crate::{convert::*, parse::*};
+use std::{
+    env,
+    fs,
+    io::{self, Write},
+    mem::transmute,
+    process::exit,
+};
 
 fn main() -> Result<(), io::Error> {
     let args: Vec<String> = env::args().collect();

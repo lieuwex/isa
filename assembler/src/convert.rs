@@ -1,5 +1,4 @@
-use crate::instruction::*;
-use crate::opcode::*;
+use crate::{instruction::*, opcode::*};
 
 pub fn convert_instruction(instr: &InternalInstruction) -> Vec<Instruction> {
     let immediate = match instr.immediate {

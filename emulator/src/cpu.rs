@@ -9,6 +9,8 @@ fn sign_extend(val: u64, nbits: u32) -> u64 {
 }
 
 pub struct CPU {
+    debug_mode: bool,
+
     regs: Registers,
     mem: Memory,
 }
@@ -159,16 +161,22 @@ impl CPU {
             }
 
             let instr = self.get_instruction()?;
+            if self.debug_mode {
+                println!("{:?}\n{:?}\n", self.regs, instr);
+            }
             self.inc_pc();
             self.execute(&instr);
-            //self.regs.print();
         }
 
+        if self.debug_mode {
+            println!("{:?}", self.regs);
+        }
         Some(())
     }
 
-    pub fn new(program: Vec<u64>) -> Self {
+    pub fn new(program: Vec<u64>, debug_mode: bool) -> Self {
         let mut res = Self {
+            debug_mode,
             regs: Registers::new(),
             mem: Memory::new(25 * 1024 * 1024), // 25 MiB
         };

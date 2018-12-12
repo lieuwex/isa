@@ -1,3 +1,5 @@
+use std::{fmt, result};
+
 pub struct Registers {
     regs: [u64; 16],
 }
@@ -15,13 +17,21 @@ impl Registers {
         self.regs[i] = val;
     }
 
-    pub fn print(&self) {
-        for (i, reg) in self.regs.iter().enumerate() {
-            println!("{} {}", i, reg);
-        }
-    }
-
     pub fn new() -> Self {
         Self { regs: [0; 16] }
+    }
+}
+
+impl fmt::Debug for Registers {
+    fn fmt(&self, f: &mut fmt::Formatter) -> result::Result<(), fmt::Error> {
+        for (i, reg) in self.regs.iter().enumerate() {
+            if i > 0 {
+                writeln!(f, "")?;
+            }
+
+            write!(f, "{} {}", i, reg)?;
+        }
+
+        Ok(())
     }
 }

@@ -21,7 +21,9 @@ fn main() -> Result<(), io::Error> {
         slice::from_raw_parts(ptr, bytes.len() / 8)
     };
 
-    let mut cpu = CPU::new(Vec::from(prog));
+    let debug_mode = env::var_os("DEBUG").is_some();
+    let mut cpu = CPU::new(Vec::from(prog), debug_mode);
+
     if cpu.exec_loop().is_none() {
         eprintln!("error while executing");
     }

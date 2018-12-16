@@ -1,7 +1,7 @@
 use crate::{instruction::*, opcode::*, util::*};
 use lazy_static::lazy_static;
 use regex::Regex;
-use std::{collections::HashMap, fmt, num};
+use std::{collections::HashMap, fmt};
 
 #[derive(Debug, Clone)]
 pub struct ParseError {
@@ -151,19 +151,25 @@ impl ParseContext {
             };
         }
 
-        let get_reg_num = |i: usize| -> Result<u8, num::ParseIntError> {
-            let n: String = args[i].chars().skip(1).collect();
+        let get_reg_num = |i: usize| -> Result<u8, ParseError> {
+            let arg = &args[i];
+            if !arg.starts_with('r') && !arg.starts_with('R') {
+                return Err(ParseError {
+                    description: String::from("expected register, got immediate value"),
+                    line_number,
+                });
+            }
 
-            match parse_number(n.as_str()) {
+            match parse_number(&arg[1..]) {
                 Ok(n) => Ok(n as u8),
-                Err(e) => Err(e),
+                Err(_) => Err(err_int_parse(line_number)),
             }
         };
         macro_rules! get_reg {
             ($e:expr) => {
                 match get_reg_num($e) {
                     Ok(x) => x,
-                    Err(_) => return Some(Err(err_int_parse(line_number))),
+                    Err(e) => return Some(Err(e)),
                 }
             };
         }

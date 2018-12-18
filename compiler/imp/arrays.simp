@@ -1,0 +1,10 @@
+(imp
+  (func main () i32
+        (do
+          (decl (arr (array u8)) (make_array u8 3))
+          (call (set arr 0 104))
+          (call (set arr 1 11))
+          (call (set arr 2 105))
+          (call putchar ((get arr 0)))
+          (call putchar ((get arr 1)))
+          (call putchar ((get arr 2))))))

@@ -28,6 +28,8 @@ private:
 	void leaveScope();
 	void addBinding(const string &name, const Type &type);
 	Type lookup(const string &name);  // returns tag==-1 if not found
+
+	Type checkCall(const string &name, vector<Expr> &args);
 };
 
 TypeCheck::~TypeCheck() {
@@ -98,6 +100,30 @@ void possiblyCoerceInt(Expr &expr, const Type &wanted) {
 	}
 }
 
+Type TypeCheck::checkCall(const string &name, vector<Expr> &args) {
+	auto it = functions.find(name);
+	if (it == functions.end()) {
+		throw runtime_error("Call to undefined function");
+	}
+
+	const FuncDesc &descr = it->second;
+	Type rettype = descr.first;
+
+	if (args.size() != descr.second.size()) {
+		throw runtime_error("Invalid number of arguments in function call");
+	}
+
+	for (size_t i = 0; i < args.size(); i++) {
+		check(args[i]);
+		possiblyCoerceInt(args[i], descr.second[i]);
+		if (args[i].restype != descr.second[i]) {
+			throw runtime_error("Invalid type in argument in function call");
+		}
+	}
+
+	return rettype;
+}
+
 void TypeCheck::check(Stmt &stmt) {
 	switch (stmt.tag) {
 		case Stmt::DECL:
@@ -148,30 +174,17 @@ void TypeCheck::check(Stmt &stmt) {
 			break;
 
 		case Stmt::CALL:
+			checkCall(stmt.name, stmt.args);
+			break;
+
 		case Stmt::CALLR: {
-			auto it = functions.find(stmt.name);
-			if (it == functions.end()) {
-				throw runtime_error("Call to undefined function");
+			Type rettype = checkCall(stmt.name, stmt.args);
+			Type vartype = lookup(stmt.target);
+			if (vartype.tag == -1) {
+				throw runtime_error("Call assignment to undeclared variable");
 			}
-			if (stmt.tag == Stmt::CALLR) {
-				Type type = lookup(stmt.target);
-				if (type.tag == -1) {
-					throw runtime_error("Call assignment to undeclared variable");
-				}
-				if (it->second.first != type) {
-					throw runtime_error("Invalid types in call assignment");
-				}
-			}
-			const FuncDesc &descr = it->second;
-			if (stmt.args.size() != descr.second.size()) {
-				throw runtime_error("Invalid number of arguments in function call");
-			}
-			for (size_t i = 0; i < stmt.args.size(); i++) {
-				check(stmt.args[i]);
-				possiblyCoerceInt(stmt.args[i], descr.second[i]);
-				if (stmt.args[i].restype != descr.second[i]) {
-					throw runtime_error("Invalid type in argument in function call");
-				}
+			if (rettype != vartype) {
+				throw runtime_error("Invalid types in call assignment");
 			}
 			break;
 		}
@@ -198,7 +211,7 @@ void TypeCheck::check(Expr &expr) {
 		}
 
 		case Expr::VARIABLE: {
-			Type type = lookup(expr.variable);
+			Type type = lookup(expr.name);
 			if (type.tag == -1) {
 				throw runtime_error("Use of undeclared variable");
 			}
@@ -270,6 +283,13 @@ void TypeCheck::check(Expr &expr) {
 				throw runtime_error("Invalid types in cast");
 			}
 			break;
+
+		case Expr::CALL: {
+			Type rettype = checkCall(expr.name, expr.args);
+			expr.restype = rettype.growInt();
+			expr.mintype = rettype;
+			break;
+		}
 
 		default: assert(false);
 	}

@@ -19,6 +19,9 @@ private:
 
 	void build(const Stmt &stmt, Id endbb);
 	Loc build(const Expr &expr, Id endbb);  // returns result reg
+
+	Loc buildCallGeneric(const string &name, const vector<Expr> &args, Id endbb);  // returns result reg
+
 	void buildDecl(const Stmt &stmt, Id endbb);
 	void buildAssign(const Stmt &stmt, Id endbb);
 	void buildIf(const Stmt &stmt, Id endbb);
@@ -71,6 +74,30 @@ void ToIR::build(const Function &function) {
 	B.setTerm(IRTerm::ret());
 
 	popScope();
+}
+
+Loc ToIR::buildCallGeneric(const string &name, const vector<Expr> &args, Id endbb) {
+	Loc r8 = B.genReg();
+	B.add(IRIns::li(r8, 8));
+
+	for (int i = args.size() - 1; i >= 0; i--) {
+		Id bb1 = B.newBB();
+		Loc loc = build(args[i], bb1);
+
+		B.switchBB(bb1);
+		B.add(IRIns::arith(Arith::SUB, Loc::reg(RSP), Loc::reg(RSP), r8));
+		B.add(IRIns::store(Loc::reg(RSP), loc, args[i].restype.size()));
+	}
+
+	B.add(IRIns::call(name));
+
+	Loc sizereg = B.genReg();
+	B.add(IRIns::li(sizereg, 8 * args.size()));
+	B.add(IRIns::arith(Arith::ADD, Loc::reg(RSP), Loc::reg(RSP), sizereg));
+
+	B.setTerm(IRTerm::jmp(endbb));
+
+	return Loc::reg(RRET);
 }
 
 void ToIR::build(const Stmt &stmt, Id endbb) {
@@ -151,28 +178,16 @@ void ToIR::buildDo(const Stmt &stmt, Id endbb) {
 }
 
 void ToIR::buildCall(const Stmt &stmt, Id endbb, bool hasRet) {
-	for (int i = stmt.args.size() - 1; i >= 0; i--) {
-		Id bb1 = B.newBB();
-		Loc loc = build(stmt.args[i], bb1);
+	Id bb1 = B.newBB();
+	Loc retreg = buildCallGeneric(stmt.name, stmt.args, bb1);
 
-		B.switchBB(bb1);
-		Loc roff = B.genReg();
-		B.add(IRIns::li(roff, 8));
-		B.add(IRIns::arith(Arith::SUB, Loc::reg(RSP), Loc::reg(RSP), roff));
-		B.add(IRIns::store(Loc::reg(RSP), loc, stmt.args[i].restype.size()));
-	}
-
-	B.add(IRIns::call(stmt.name));
-
-	Loc sizereg = B.genReg();
-	B.add(IRIns::li(sizereg, 8 * stmt.args.size()));
-	B.add(IRIns::arith(Arith::ADD, Loc::reg(RSP), Loc::reg(RSP), sizereg));
+	B.switchBB(bb1);
 
 	if (hasRet) {
 		Loc loc = lookup(stmt.target);
 		if (loc.tag == -1) throw runtime_error("Call asg to undefined variable");
 
-		B.add(IRIns::mov(loc, Loc::reg(RRET)));
+		B.add(IRIns::mov(loc, retreg));
 	}
 
 	B.setTerm(IRTerm::jmp(endbb));
@@ -197,7 +212,7 @@ Loc ToIR::build(const Expr &expr, Id endbb) {
 		}
 
 		case Expr::VARIABLE: {
-			Loc loc = lookup(expr.variable);
+			Loc loc = lookup(expr.name);
 			if (loc.tag == -1) throw runtime_error("IR: Use of undeclared variable");
 			B.setTerm(IRTerm::jmp(endbb));
 			return loc;
@@ -261,6 +276,17 @@ Loc ToIR::build(const Expr &expr, Id endbb) {
 				throw runtime_error("Cannot convert between incompatible types");
 			}
 
+			B.setTerm(IRTerm::jmp(endbb));
+			return resloc;
+		}
+
+		case Expr::CALL: {
+			Id bb1 = B.newBB();
+			Loc retreg = buildCallGeneric(expr.name, expr.args, bb1);
+
+			Loc resloc = B.genReg();
+			B.switchBB(bb1);
+			B.add(IRIns::mov(resloc, retreg));
 			B.setTerm(IRTerm::jmp(endbb));
 			return resloc;
 		}

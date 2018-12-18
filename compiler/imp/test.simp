@@ -9,6 +9,7 @@
 		(do
 		  (decl (x i64) (+ 1 2))
 		  (callr x f ((* x 3)))
+		  (asg x (call f ((+ x 1))))
 		  (call putchar ((cast u8 104)))
 		  (call putchar ((cast u8 111)))
 		  (call putchar ((cast u8 105)))

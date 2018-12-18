@@ -115,8 +115,8 @@ bool Type::operator!=(const Type &other) const {
 Expr::Expr(i64 number)
 		: tag(NUMBER), number(number) {}
 
-Expr::Expr(const string &variable)
-		: tag(VARIABLE), variable(variable) {}
+Expr::Expr(const string &name)
+		: tag(VARIABLE), name(name) {}
 
 Expr::Expr(int tag, unique_ptr<Expr> &&e1, unique_ptr<Expr> &&e2)
 		: tag(tag), e1(move(e1)), e2(move(e2)) {}
@@ -124,6 +124,14 @@ Expr::Expr(int tag, unique_ptr<Expr> &&e1, unique_ptr<Expr> &&e2)
 Expr Expr::makeCast(unique_ptr<Expr> &&e1, const Type &type) {
 	Expr e = Expr(CAST, move(e1), unique_ptr<Expr>());
 	e.type = type;
+	return e;
+}
+
+Expr Expr::makeCall(const string &name, vector<Expr> &&args) {
+	Expr e;
+	e.tag = CALL;
+	e.name = name;
+	e.args = move(args);
 	return e;
 }
 
@@ -155,7 +163,7 @@ void Expr::writeProlog(ostream &os) const {
 			break;
 
 		case VARIABLE:
-			os << "expr_var(" << variable << ")";
+			os << "expr_var(" << name << ")";
 			break;
 
 		case PLUS: os << "expr_plus"; goto case_binop_label;

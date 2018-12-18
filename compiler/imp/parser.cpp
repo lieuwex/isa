@@ -172,6 +172,19 @@ static Expr parseExpr(const SExpr &sexpr) {
 							parseType(sexpr.list[1]));
 				}
 
+				if (sexpr.list[0] == SExpr("call")) {
+					if (sexpr.list[1].tag != SExpr::WORD ||
+							sexpr.list[2].tag != SExpr::LIST) {
+						throw runtime_error("Invalid call in expression");
+					}
+
+					vector<Expr> args;
+					for (const SExpr &s : sexpr.list[2].list) {
+						args.push_back(parseExpr(s));
+					}
+					return Expr::makeCall(sexpr.list[1].word, move(args));
+				}
+
 				int tag = -1;
 				if (sexpr.list[0] == SExpr("+")) tag = Expr::PLUS;
 				else if (sexpr.list[0] == SExpr("-")) tag = Expr::MINUS;

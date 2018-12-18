@@ -59,7 +59,7 @@ class Expr {
 public:
 	enum {
 		NUMBER,     // number
-		VARIABLE,   // variable
+		VARIABLE,   // name
 
 		PLUS,       // e1, e2
 		MINUS,      // e1, e2
@@ -68,14 +68,16 @@ public:
 		LESS,       // e1, e2
 		LESSEQUAL,  // e1, e2
 		CAST,       // e1, type
+		CALL,       // name, args
 
 		CONVERT,    // e1, type
 	};
 
 	int tag;
 	i64 number;
-	string variable;
+	string name;
 	unique_ptr<Expr> e1, e2;
+	vector<Expr> args;
 	Type type;
 
 	// The type of the expression, annotated by the type checker
@@ -86,10 +88,11 @@ public:
 
 	Expr() = default;
 	Expr(i64 number);
-	Expr(const string &variable);
+	Expr(const string &name);
 	Expr(int tag, unique_ptr<Expr> &&e1, unique_ptr<Expr> &&e2);
 
 	static Expr makeCast(unique_ptr<Expr> &&e1, const Type &type);
+	static Expr makeCall(const string &name, vector<Expr> &&args);
 	static Expr makeConvert(unique_ptr<Expr> &&e1, const Type &type);
 
 	void writeProlog(ostream &os) const;

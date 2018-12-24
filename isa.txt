@@ -62,3 +62,5 @@ The callee is responsible for backing up the link register on the stack.
 Return register: r13
 Link register: r14
 Stack pointer: r15
+
+Registers r1-r11 are callee-save; r12 is caller-save.

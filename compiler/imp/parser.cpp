@@ -10,6 +10,16 @@ static void skipWhite(string_view &s) {
 	s.remove_prefix(min(s.size(), s.find_first_not_of(" \n\t")));
 }
 
+static void skipWhiteComment(string_view &s) {
+	while (true) {
+		skipWhite(s);
+		if (s.size() == 0 || s[0] != ';') break;
+		size_t idx = s.find('\n');
+		if (idx == string_view::npos) idx = s.size();
+		s.remove_prefix(idx);
+	}
+}
+
 static i64 svtoI(string_view &s) {
 	skipWhite(s);
 	if (s.size() == 0) throw invalid_argument("Cannot parse number");
@@ -31,7 +41,7 @@ static i64 svtoI(string_view &s) {
 }
 
 static SExpr goParse(string_view &s) {
-	skipWhite(s);
+	skipWhiteComment(s);
 	if (s.size() == 0) throw runtime_error("Expected s-expression");
 
 	SExpr res;
@@ -40,7 +50,7 @@ static SExpr goParse(string_view &s) {
 		res.tag = SExpr::LIST;
 
 		while (true) {
-			skipWhite(s);
+			skipWhiteComment(s);
 			if (s.size() > 0 && s[0] == ')') {
 				s.remove_prefix(1);
 				break;

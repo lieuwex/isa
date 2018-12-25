@@ -270,16 +270,49 @@ void TypeCheck::check(Expr &expr) {
 			break;
 
 		case Expr::LESS:
-		case Expr::LESSEQUAL:
+		case Expr::LESSEQUAL: {
 			check(*expr.e1);
 			check(*expr.e2);
-			if (expr.e1->restype.tag == expr.e2->restype.tag && expr.e1->restype.isIntegral()) {
+			const Type &t1 = expr.e1->restype;
+			const Type &t2 = expr.e2->restype;
+			if (t1 == t2 && t1.isIntegral()) {
 				expr.restype = Type::makeUInt(1);
 				expr.mintype = Type::makeUInt(1);
 			} else {
 				throw runtime_error("Invalid types in binary comparison operator");
 			}
 			break;
+		}
+
+		case Expr::EQUAL:
+		case Expr::UNEQUAL: {
+			check(*expr.e1);
+			check(*expr.e2);
+			const Type &t1 = expr.e1->restype;
+			const Type &t2 = expr.e2->restype;
+			if (t1 == t2 && (t1.isIntegral() || t1.tag == Type::PTR)) {
+				expr.restype = Type::makeUInt(1);
+				expr.mintype = Type::makeUInt(1);
+			} else {
+				throw runtime_error("Invalid types in binary equality operator");
+			}
+			break;
+		}
+
+		case Expr::BOOLAND:
+		case Expr::BOOLOR: {
+			check(*expr.e1);
+			check(*expr.e2);
+			const Type &t1 = expr.e1->restype;
+			const Type &t2 = expr.e2->restype;
+			if (t1 == Type::makeUInt(1) && t2 == Type::makeUInt(1)) {
+				expr.restype = Type::makeUInt(1);
+				expr.mintype = Type::makeUInt(1);
+			} else {
+				throw runtime_error("Invalid types in binary boolean operator");
+			}
+			break;
+		}
 
 		case Expr::CAST:
 			check(*expr.e1);

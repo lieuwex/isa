@@ -179,6 +179,10 @@ void Expr::writeProlog(ostream &os) const {
 		case DIVIDE: os << "expr_divide"; goto case_binop_label;
 		case LESS: os << "expr_less"; goto case_binop_label;
 		case LESSEQUAL: os << "expr_lessequal"; goto case_binop_label;
+		case EQUAL: os << "expr_equal"; goto case_binop_label;
+		case UNEQUAL: os << "expr_unequal"; goto case_binop_label;
+		case BOOLAND: os << "expr_booland"; goto case_binop_label;
+		case BOOLOR: os << "expr_booland"; goto case_binop_label;
 		case GET: os << "expr_get"; goto case_binop_label;
 		case REF: os << "expr_ref"; goto case_binop_label;
 case_binop_label:

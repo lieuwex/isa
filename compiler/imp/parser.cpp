@@ -214,17 +214,26 @@ static Expr parseExpr(const SExpr &sexpr) {
 				}
 
 				int tag = -1;
+				int idx1 = 1, idx2 = 2;
 				if (sexpr.list[0] == SExpr("+")) tag = Expr::PLUS;
 				else if (sexpr.list[0] == SExpr("-")) tag = Expr::MINUS;
 				else if (sexpr.list[0] == SExpr("*")) tag = Expr::TIMES;
 				else if (sexpr.list[0] == SExpr("/")) tag = Expr::DIVIDE;
 				else if (sexpr.list[0] == SExpr("<")) tag = Expr::LESS;
 				else if (sexpr.list[0] == SExpr("<=")) tag = Expr::LESSEQUAL;
+				else if (sexpr.list[0] == SExpr(">"))
+					{ tag = Expr::LESS; swap(idx1, idx2); }
+				else if (sexpr.list[0] == SExpr(">="))
+					{ tag = Expr::LESSEQUAL; swap(idx1, idx2); }
+				else if (sexpr.list[0] == SExpr("=")) tag = Expr::EQUAL;
+				else if (sexpr.list[0] == SExpr("!=")) tag = Expr::UNEQUAL;
+				else if (sexpr.list[0] == SExpr("&&")) tag = Expr::BOOLAND;
+				else if (sexpr.list[0] == SExpr("||")) tag = Expr::BOOLOR;
 
 				if (tag != -1) {
 					return Expr(tag,
-							make_unique<Expr>(parseExpr(sexpr.list[1])),
-							make_unique<Expr>(parseExpr(sexpr.list[2])));
+							make_unique<Expr>(parseExpr(sexpr.list[idx1])),
+							make_unique<Expr>(parseExpr(sexpr.list[idx2])));
 				}
 			}
 

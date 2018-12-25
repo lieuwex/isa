@@ -217,6 +217,21 @@ void ToIR::buildReturn(const Stmt &stmt, Id) {
 	B.setTerm(IRTerm::ret());
 }
 
+static bool supportedUnsignedArith(const Expr &expr) {
+	switch (expr.tag) {
+		case Expr::PLUS:
+		case Expr::MINUS:
+		case Expr::EQUAL:
+		case Expr::UNEQUAL:
+		case Expr::BOOLAND:
+		case Expr::BOOLOR:
+			return true;
+
+		default:
+			return false;
+	}
+}
+
 Loc ToIR::build(const Expr &expr, Id endbb) {
 	switch (expr.tag) {
 		case Expr::NUMBER: {
@@ -238,7 +253,11 @@ Loc ToIR::build(const Expr &expr, Id endbb) {
 		case Expr::TIMES:
 		case Expr::DIVIDE:
 		case Expr::LESS:
-		case Expr::LESSEQUAL: {
+		case Expr::LESSEQUAL:
+		case Expr::EQUAL:
+		case Expr::UNEQUAL:
+		case Expr::BOOLAND:
+		case Expr::BOOLOR: {
 			Id bb1 = B.newBB();
 			Loc l1 = build(*expr.e1, bb1);
 
@@ -247,28 +266,49 @@ Loc ToIR::build(const Expr &expr, Id endbb) {
 			Loc l2 = build(*expr.e2, bb2);
 
 			assert(expr.e1->restype.tag == expr.e2->restype.tag);
-			if (expr.e1->restype.tag == Type::UINT) {
-				if (expr.tag != Expr::PLUS && expr.tag != Expr::MINUS) {
-					throw runtime_error("Unsupported arithmetic operation on unsigned operands");
-				}
+			assert(expr.e1->restype.size() == expr.e2->restype.size());
+			if (expr.e1->restype.tag == Type::UINT && !supportedUnsignedArith(expr)) {
+				throw runtime_error("Unsupported arithmetic operation on unsigned operands");
 			}
 
 			B.switchBB(bb2);
+			Loc resreg = B.genReg();;
 			Arith op;
 			switch (expr.tag) {
-				case Expr::PLUS: op = Arith::ADD; break;
-				case Expr::MINUS: op = Arith::SUB; break;
-				case Expr::TIMES: op = Arith::MUL; break;
-				case Expr::DIVIDE: op = Arith::DIV; break;
-				case Expr::LESS: op = Arith::LT; break;
-				case Expr::LESSEQUAL: op = Arith::LTE; break;
-				default: assert(false);
+				case Expr::PLUS: op = Arith::ADD; goto native_arith_instr;
+				case Expr::MINUS: op = Arith::SUB; goto native_arith_instr;
+				case Expr::TIMES: op = Arith::MUL; goto native_arith_instr;
+				case Expr::DIVIDE: op = Arith::DIV; goto native_arith_instr;
+				case Expr::LESS: op = Arith::LT; goto native_arith_instr;
+				case Expr::LESSEQUAL: op = Arith::LTE; goto native_arith_instr;
+				case Expr::BOOLAND: op = Arith::AND; goto native_arith_instr;
+				case Expr::BOOLOR: op = Arith::OR; goto native_arith_instr;
+				native_arith_instr:
+					B.add(IRIns::arith(op, resreg, l1, l2));
+					break;
+
+				case Expr::EQUAL: {
+					Loc r1 = B.genReg(), r2 = B.genReg();
+					B.add(IRIns::arith(Arith::LTE, r1, l1, l2));
+					B.add(IRIns::arith(Arith::LTE, r2, l2, l1));
+					B.add(IRIns::arith(Arith::AND, resreg, r1, r2));
+					break;
+				}
+
+				case Expr::UNEQUAL: {
+					Loc r1 = B.genReg(), r2 = B.genReg();
+					B.add(IRIns::arith(Arith::LT, r1, l1, l2));
+					B.add(IRIns::arith(Arith::LT, r2, l2, l1));
+					B.add(IRIns::arith(Arith::OR, resreg, r1, r2));
+					break;
+				}
+
+				default:
+					assert(false);
 			}
 
-			Loc reg = B.genReg();
-			B.add(IRIns::arith(op, reg, l1, l2));
 			B.setTerm(IRTerm::jmp(endbb));
-			return reg;
+			return resreg;
 		}
 
 		case Expr::CONVERT: {

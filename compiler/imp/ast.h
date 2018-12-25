@@ -67,6 +67,10 @@ public:
 		DIVIDE,     // e1, e2
 		LESS,       // e1, e2
 		LESSEQUAL,  // e1, e2
+		EQUAL,      // e1, e2
+		UNEQUAL,    // e1, e2
+		BOOLAND,    // e1, e2
+		BOOLOR,     // e1, e2
 		CAST,       // e1, type
 		PTRCAST,    // e1, type
 		CALL,       // name, args

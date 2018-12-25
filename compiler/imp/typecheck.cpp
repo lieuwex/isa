@@ -305,7 +305,8 @@ void TypeCheck::check(Expr &expr) {
 				expr.restype = destType.growInt();
 				expr.mintype = destType;
 			} else if (expr.e1->restype.tag == Type::PTR) {
-				expr = move(*expr.e1);
+				Expr e = move(*expr.e1);
+				expr = move(e);
 				expr.restype = destType;
 				expr.mintype = destType;
 			} else {

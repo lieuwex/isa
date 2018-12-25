@@ -118,6 +118,7 @@ public:
 		CALL,    // name, args
 		CALLR,   // target, name, args
 		RETURN,  // expr
+		BREAK,   // -
 	};
 
 	int tag;

@@ -21,6 +21,7 @@ private:
 	using FuncDesc = pair<Type, vector<Type>>;
 	vector<unordered_map<string, Type>> stk;
 	unordered_map<string, FuncDesc> functions;
+	int loopDepth = 0;
 
 	string currentFunction;
 
@@ -175,7 +176,9 @@ void TypeCheck::check(Stmt &stmt) {
 			if (stmt.expr.restype != Type::makeUInt(1)) {
 				throw runtime_error("Invalid type in while condition");
 			}
+			loopDepth++;
 			enterScope(); check(stmt.ch[0]); leaveScope();
+			loopDepth--;
 			break;
 
 		case Stmt::DO:
@@ -208,6 +211,12 @@ void TypeCheck::check(Stmt &stmt) {
 			}
 			break;
 		}
+
+		case Stmt::BREAK:
+			if (loopDepth == 0) {
+				throw runtime_error("Break statement outside loop");
+			}
+			break;
 
 		default: assert(false);
 	}

@@ -30,8 +30,10 @@ private:
 	void buildDo(const Stmt &stmt, Id endbb);
 	void buildCall(const Stmt &stmt, Id endbb, bool hasRet);
 	void buildReturn(const Stmt &stmt, Id endbb);
+	void buildBreak(const Stmt &stmt, Id endbb);
 
 	vector<unordered_map<string, Loc>> stk;
+	vector<Id> loopStk;
 
 	IRBuilder &B;
 };
@@ -112,6 +114,7 @@ void ToIR::build(const Stmt &stmt, Id endbb) {
 		case Stmt::CALL: buildCall(stmt, endbb, false); break;
 		case Stmt::CALLR: buildCall(stmt, endbb, true); break;
 		case Stmt::RETURN: buildReturn(stmt, endbb); break;
+		case Stmt::BREAK: buildBreak(stmt, endbb); break;
 		default: assert(false);
 	}
 }
@@ -176,7 +179,9 @@ void ToIR::buildWhile(const Stmt &stmt, Id endbb) {
 	B.setTerm(IRTerm::jz(eloc, endbb, bbBody));
 
 	B.switchBB(bbBody);
+	loopStk.push_back(endbb);
 	build(stmt.ch[0], bbCond);
+	loopStk.pop_back();
 }
 
 void ToIR::buildDo(const Stmt &stmt, Id endbb) {
@@ -215,6 +220,10 @@ void ToIR::buildReturn(const Stmt &stmt, Id) {
 	B.switchBB(bb1);
 	B.add(IRIns::mov(Loc::reg(RRET), loc));
 	B.setTerm(IRTerm::ret());
+}
+
+void ToIR::buildBreak(const Stmt&, Id) {
+	B.setTerm(IRTerm::jmp(loopStk.back()));
 }
 
 static bool supportedUnsignedArith(const Expr &expr) {

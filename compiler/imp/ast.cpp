@@ -227,6 +227,12 @@ void Stmt::writeProlog(ostream &os) const {
 			expr.writeProlog(os); os << ")";
 			break;
 
+		case STORE:
+			os << "stmt_store(";
+			targetexpr.writeProlog(os); os << ",";
+			expr.writeProlog(os); os << ")";
+			break;
+
 		case IF:
 			os << "stmt_if(";
 			expr.writeProlog(os); os << ",";

@@ -1,11 +1,99 @@
 (imp
   (func main () i32
         (do
-          ; (decl (arr (ptr u8)) (call malloc (3)))
-          (decl (arr (ptr u8)) (unsafe-ptr-cast u8 1048576))
+          (decl (arr (ptr u8)) (call malloc (3)))
+          ; (decl (arr (ptr u8)) (unsafe-ptr-cast (ptr u8) 1048576))
           (store (ref arr 0) (cast u8 104))
           (store (ref arr 1) (cast u8 111))
           (store (ref arr 2) (cast u8 105))
           (call putchar ((get arr 0)))
           (call putchar ((get arr 1)))
-          (call putchar ((get arr 2))))))
+          (call putchar ((get arr 2)))))
+
+  ; struct block_t {
+  ;     size_t size;
+  ;     struct block_t *next;
+  ;     bool free;
+  ; }
+
+  (func __malloc_heap_base ((offset i64)) (ptr u8)
+        (return (unsafe-ptr-cast (ptr u8) (+ 1018576 offset))))
+  (func __malloc_init_flag () (ptr i8)
+        (return (unsafe-ptr-cast (ptr i8) (call __malloc_heap_base (0)))))
+  (func __malloc_chain_head () (ptr (ptr i64))
+        (return (unsafe-ptr-cast (ptr (ptr i64)) (call __malloc_heap_base (8)))))
+  (func __malloc_chain_last () (ptr (ptr i64))
+        (return (unsafe-ptr-cast (ptr (ptr i64)) (call __malloc_heap_base (16)))))
+  (func __malloc_taken () (ptr i64)
+        (return (unsafe-ptr-cast (ptr i64) (call __malloc_heap_base (24)))))
+  (func __malloc_arena () (ptr u8)
+        (return (call __malloc_heap_base (32))))
+
+  (func __malloc_block_size ((block (ptr i64))) (ptr i64)
+        (return block))
+  (func __malloc_block_next ((block (ptr i64))) (ptr (ptr i64))
+        (return (unsafe-ptr-cast (ptr (ptr i64)) (ref block 1))))
+  (func __malloc_block_free ((block (ptr i64))) (ptr i8)
+        (return (unsafe-ptr-cast (ptr i8) (ref block 2))))
+
+  (func __null () (ptr i64)
+        (return (unsafe-ptr-cast (ptr i64) 0)))
+
+  (func __malloc_init () u8
+        (do
+          (store (call __malloc_chain_head ()) (unsafe-ptr-cast (ptr i64) 0))
+          (store (call __malloc_chain_last ()) (unsafe-ptr-cast (ptr i64) 0))
+          (store (call __malloc_taken ()) 0)
+          (store (call __malloc_init_flag ()) 1)))
+
+  (func __malloc_allocate_new_block ((size i64)) (ptr i64)
+        (do
+          (if (!= (get (call __malloc_init_flag ()) 0) 0)
+            (call __malloc_init ())
+            (do))
+
+          (decl (taken (ptr i64)) (call __malloc_taken ()))
+          (decl (block (ptr i64))
+                (unsafe-ptr-cast (ptr i64)
+                                 (ref (call __malloc_arena ()) (get taken 0))))
+          (store taken (+ 24 size))
+
+          (store (call __malloc_block_size (block)) size)
+          (store (call __malloc_block_next (block)) (call __null ()))
+
+          (decl (cl (ptr (ptr i64))) (call __malloc_chain_last ()))
+          (if (!= (get cl 0) (call __null ()))
+            (store (call __malloc_block_next ((get cl 0))) block)
+            (do (store cl block) (store (call __malloc_chain_head ()) block)))
+
+          (return block)))
+
+  (func __malloc_obtain_free_block ((size i64)) (ptr i64)
+        (do
+          (decl (block (ptr i64)) (get (call __malloc_chain_head ()) 0))
+          (while (!= block (call __null ()))
+                 (do
+                   (if (&& (= 1 (get (call __malloc_block_free (block)) 0))
+                           (>= (get (call __malloc_block_size (block)) 0) size))
+                     (break)
+                     (do))
+                   (asg block (get (call __malloc_block_next (block)) 0))))
+          (return block)))
+
+  (func malloc ((size i64)) (ptr u8)
+        (do
+          (if (= size 0)
+            (return (unsafe-ptr-cast (ptr u8) (call __null ())))
+            (do))
+
+          (decl (block (ptr i64)) (call __null ()))
+          (if (= (get (call __malloc_chain_head ()) 0) (call __null ()))
+            (asg block (call __malloc_allocate_new_block (size)))
+            (do
+              (asg block (call __malloc_obtain_free_block (size)))
+              (if (= block (call __null ()))
+                (asg block (call __malloc_allocate_new_block (size)))
+                (do))))
+
+          (store (call __malloc_block_free (block)) 0)
+          (return (unsafe-ptr-cast (ptr u8) (ref block 3))))))

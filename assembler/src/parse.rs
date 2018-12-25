@@ -117,7 +117,7 @@ impl ParseContext {
     ) -> Option<Result<InternalInstruction, ParseError>> {
         lazy_static! {
             static ref commentreg: Regex = Regex::new(r";.+$").unwrap();
-            static ref labelreg: Regex = Regex::new(r"(?i)^([a-z]\w*):$").unwrap();
+            static ref labelreg: Regex = Regex::new(r"(?i)^([a-z_]\w*):$").unwrap();
         }
 
         // remove comments and trim the line, we only need code

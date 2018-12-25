@@ -244,21 +244,17 @@ static Stmt parseStmt(const SExpr &sexpr) {
 		stmt.decl = parseDecl(sexpr.list[1]);
 		stmt.expr = parseExpr(sexpr.list[2]);
 	} else if (sexpr.matchList({SExpr("asg")})) {
-		if (sexpr.list.size() != 3) {
+		if (sexpr.list.size() != 3 || sexpr.list[1].tag != SExpr::WORD) {
 			throw runtime_error("Invalid assignment");
 		}
-		if (sexpr.list[1].tag == SExpr::WORD) {
-			stmt.tag = Stmt::ASSIGN;
-			stmt.target = sexpr.list[1].word;
-			stmt.expr = parseExpr(sexpr.list[2]);
-		} else if (sexpr.list[1].tag == SExpr::LIST && sexpr.list[1].list.size() == 3 &&
-					sexpr.list[1].matchList({SExpr("ref")})) {
-			stmt.tag = Stmt::STORE;
-			stmt.targetexpr = parseExpr(sexpr.list[1]);
-			stmt.expr = parseExpr(sexpr.list[2]);
-		} else {
-			throw runtime_error("Invalid assignment form");
-		}
+		stmt.tag = Stmt::ASSIGN;
+		stmt.target = sexpr.list[1].word;
+		stmt.expr = parseExpr(sexpr.list[2]);
+	} else if (sexpr.matchList({SExpr("store")})) {
+		if (sexpr.list.size() != 3) throw runtime_error("Invalid store");
+		stmt.tag = Stmt::STORE;
+		stmt.targetexpr = parseExpr(sexpr.list[1]);
+		stmt.expr = parseExpr(sexpr.list[2]);
 	} else if (sexpr.matchList({SExpr("if")})) {
 		if (sexpr.list.size() != 4) throw runtime_error("Invalid if");
 		stmt.tag = Stmt::IF;

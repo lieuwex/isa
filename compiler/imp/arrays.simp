@@ -3,9 +3,9 @@
         (do
           ; (decl (arr (ptr u8)) (call malloc (3)))
           (decl (arr (ptr u8)) (unsafe-ptr-cast u8 1048576))
-          (asg (ref arr 0) (cast u8 104))
-          (asg (ref arr 1) (cast u8 111))
-          (asg (ref arr 2) (cast u8 105))
+          (store (ref arr 0) (cast u8 104))
+          (store (ref arr 1) (cast u8 111))
+          (store (ref arr 2) (cast u8 105))
           (call putchar ((get arr 0)))
           (call putchar ((get arr 1)))
           (call putchar ((get arr 2))))))

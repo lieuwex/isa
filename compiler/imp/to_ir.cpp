@@ -24,6 +24,7 @@ private:
 
 	void buildDecl(const Stmt &stmt, Id endbb);
 	void buildAssign(const Stmt &stmt, Id endbb);
+	void buildStore(const Stmt &stmt, Id endbb);
 	void buildIf(const Stmt &stmt, Id endbb);
 	void buildWhile(const Stmt &stmt, Id endbb);
 	void buildDo(const Stmt &stmt, Id endbb);
@@ -104,6 +105,7 @@ void ToIR::build(const Stmt &stmt, Id endbb) {
 	switch (stmt.tag) {
 		case Stmt::DECL: buildDecl(stmt, endbb); break;
 		case Stmt::ASSIGN: buildAssign(stmt, endbb); break;
+		case Stmt::STORE: buildStore(stmt, endbb); break;
 		case Stmt::IF: buildIf(stmt, endbb); break;
 		case Stmt::WHILE: buildWhile(stmt, endbb); break;
 		case Stmt::DO: buildDo(stmt, endbb); break;
@@ -128,6 +130,19 @@ void ToIR::buildAssign(const Stmt &stmt, Id endbb) {
 
 	B.switchBB(bb1);
 	B.add(IRIns::mov(loc, eloc));
+	B.setTerm(IRTerm::jmp(endbb));
+}
+
+void ToIR::buildStore(const Stmt &stmt, Id endbb) {
+	Id bb1 = B.newBB();
+	Loc loc = build(stmt.targetexpr, bb1);
+
+	B.switchBB(bb1);
+	Id bb2 = B.newBB();
+	Loc eloc = build(stmt.expr, bb2);
+
+	B.switchBB(bb2);
+	B.add(IRIns::store(loc, eloc, stmt.expr.restype.size()));
 	B.setTerm(IRTerm::jmp(endbb));
 }
 
@@ -287,6 +302,37 @@ Loc ToIR::build(const Expr &expr, Id endbb) {
 			Loc resloc = B.genReg();
 			B.switchBB(bb1);
 			B.add(IRIns::mov(resloc, retreg));
+			B.setTerm(IRTerm::jmp(endbb));
+			return resloc;
+		}
+
+		case Expr::GET:
+		case Expr::REF: {
+			Id bb1 = B.newBB();
+			Loc ptrloc = build(*expr.e1, bb1);
+
+			B.switchBB(bb1);
+			Id bb2 = B.newBB();
+			Loc idxloc = build(*expr.e2, bb2);
+
+			int size = expr.e1->restype.contained->size();
+
+			B.switchBB(bb2);
+			Loc multiplier = B.genReg();
+			B.add(IRIns::li(multiplier, size));
+			Loc offset = B.genReg();
+			B.add(IRIns::arith(Arith::MUL, offset, idxloc, multiplier));
+			Loc resptr = B.genReg();
+			B.add(IRIns::arith(Arith::ADD, resptr, ptrloc, offset));
+
+			Loc resloc;
+			if (expr.tag == Expr::GET) {
+				resloc = B.genReg();
+				B.add(IRIns::load(resloc, resptr, size));
+			} else {
+				resloc = resptr;
+			}
+
 			B.setTerm(IRTerm::jmp(endbb));
 			return resloc;
 		}

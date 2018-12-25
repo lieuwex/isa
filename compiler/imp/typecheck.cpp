@@ -148,6 +148,17 @@ void TypeCheck::check(Stmt &stmt) {
 			break;
 		}
 
+		case Stmt::STORE: {
+			check(stmt.targetexpr);
+			check(stmt.expr);
+			assert(stmt.targetexpr.restype.tag == Type::PTR);
+			possiblyCoerceInt(stmt.expr, *stmt.targetexpr.restype.contained);
+			if (stmt.targetexpr.restype != Type::makePointer(stmt.expr.restype)) {
+				throw runtime_error("Unequal types in storing assignment");
+			}
+			break;
+		}
+
 		case Stmt::IF:
 			check(stmt.expr);
 			possiblyCoerceInt(stmt.expr, Type::makeUInt(1));
@@ -273,8 +284,7 @@ void TypeCheck::check(Expr &expr) {
 		case Expr::CAST:
 			check(*expr.e1);
 			if (expr.e1->restype == expr.type) {
-				expr.restype = expr.e1->restype;
-				expr.mintype = expr.e1->mintype;
+				expr = move(*expr.e1);
 			} else if (expr.type.isIntegral() && expr.e1->restype.isIntegral()) {
 				expr = Expr::makeConvert(move(expr.e1), expr.type);
 				expr.restype = expr.type;
@@ -284,10 +294,58 @@ void TypeCheck::check(Expr &expr) {
 			}
 			break;
 
+		case Expr::PTRCAST: {
+			check(*expr.e1);
+			if (expr.type.tag != Type::PTR) {
+				throw runtime_error("Pointer cast to non-pointer type");
+			}
+			Type destType = expr.type;
+			if (expr.e1->restype.isIntegral()) {
+				expr = Expr::makeConvert(move(expr.e1), Type::makeInt(64));
+				expr.restype = destType.growInt();
+				expr.mintype = destType;
+			} else if (expr.e1->restype.tag == Type::PTR) {
+				expr = move(*expr.e1);
+				expr.restype = destType;
+				expr.mintype = destType;
+			} else {
+				throw runtime_error("Pointer cast from non-number-like type");
+			}
+			break;
+		}
+
 		case Expr::CALL: {
 			Type rettype = checkCall(expr.name, expr.args);
 			expr.restype = rettype.growInt();
 			expr.mintype = rettype;
+			break;
+		}
+
+		case Expr::GET: {
+			check(*expr.e1);
+			check(*expr.e2);
+			if (!expr.e2->restype.isIntegral()) {
+				throw runtime_error("Cannot index pointer with non-integer type");
+			}
+			if (expr.e1->restype.tag != Type::PTR) {
+				throw runtime_error("Cannot index non-pointer");
+			}
+			expr.restype = expr.e1->restype.contained->growInt();
+			expr.mintype = *expr.e1->restype.contained;
+			break;
+		}
+
+		case Expr::REF: {
+			check(*expr.e1);
+			check(*expr.e2);
+			if (!expr.e2->restype.isIntegral()) {
+				throw runtime_error("Cannot ref-index pointer with non-integer type");
+			}
+			if (expr.e1->restype.tag != Type::PTR) {
+				throw runtime_error("Cannot ref-index non-pointer");
+			}
+			expr.restype = expr.e1->restype;
+			expr.mintype = expr.e1->restype;
 			break;
 		}
 

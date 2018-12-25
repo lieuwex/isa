@@ -52,9 +52,9 @@ Type Type::makeUInt(int bits) {
 	return type;
 }
 
-Type Type::makeArray(const Type &contained) {
+Type Type::makePointer(const Type &contained) {
 	Type type;
-	type.tag = ARRAY;
+	type.tag = PTR;
 	type.contained = new Type(move(contained));
 	return type;
 }
@@ -81,7 +81,7 @@ int Type::size() const {
 		case UINT:
 			assert(bits == 1 || bits == 8 || bits == 16 || bits == 32 || bits == 64);
 			return bits / 8;
-		case ARRAY: return 8;  // pointer
+		case PTR: return 8;  // pointer
 		default: assert(false);
 	}
 }
@@ -100,7 +100,7 @@ bool Type::operator==(const Type &other) const {
 		case INT:
 		case UINT:
 			return bits == other.bits;
-		case ARRAY:
+		case PTR:
 			return *contained == *other.contained;
 		default:
 			assert(false);
@@ -127,6 +127,12 @@ Expr Expr::makeCast(unique_ptr<Expr> &&e1, const Type &type) {
 	return e;
 }
 
+Expr Expr::makePtrCast(unique_ptr<Expr> &&e1, const Type &type) {
+	Expr e = Expr(PTRCAST, move(e1), unique_ptr<Expr>());
+	e.type = type;
+	return e;
+}
+
 Expr Expr::makeCall(const string &name, vector<Expr> &&args) {
 	Expr e;
 	e.tag = CALL;
@@ -146,7 +152,8 @@ void Type::writeProlog(ostream &os) const {
 	switch (tag) {
 		case INT: os << "type_int_sized(b" << bits << ")"; break;
 		case UINT: os << "type_uint_sized(b" << bits << ")"; break;
-		case ARRAY: os << "type_array("; contained->writeProlog(os); os << ")"; break;
+		case PTR: os << "type_ptr("; contained->writeProlog(os); os << ")"; break;
+		default: assert(false);
 	}
 }
 
@@ -172,13 +179,34 @@ void Expr::writeProlog(ostream &os) const {
 		case DIVIDE: os << "expr_divide"; goto case_binop_label;
 		case LESS: os << "expr_less"; goto case_binop_label;
 		case LESSEQUAL: os << "expr_lessequal"; goto case_binop_label;
+		case GET: os << "expr_get"; goto case_binop_label;
+		case REF: os << "expr_ref"; goto case_binop_label;
 case_binop_label:
 			os << "(";
-			e1->writeProlog(os);
-			os << ",";
-			e2->writeProlog(os);
-			os << ")";
+			e1->writeProlog(os); os << ",";
+			e2->writeProlog(os); os << ")";
 			break;
+
+		case CAST: os << "expr_cast"; goto case_cast_label;
+		case PTRCAST: os << "expr_ptrcast"; goto case_cast_label;
+		case CONVERT: os << "expr_convert"; goto case_cast_label;
+case_cast_label:
+			os << "(";
+			e1->writeProlog(os); os << ",";
+			type.writeProlog(os); os << ")";
+			break;
+
+		case CALL:
+			os << "expr_call(" << name << ",[";
+			for (size_t i = 0; i < args.size(); i++) {
+				if (i != 0) os << ",";
+				args[i].writeProlog(os);
+			}
+			os << "])";
+			break;
+
+		default:
+			assert(false);
 	}
 }
 
@@ -232,5 +260,8 @@ void Stmt::writeProlog(ostream &os) const {
 			os << "stmt_return(";
 			expr.writeProlog(os); os << ")";
 			break;
+
+		default:
+			assert(false);
 	}
 }

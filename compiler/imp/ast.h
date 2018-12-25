@@ -18,7 +18,7 @@ public:
 	enum {
 		INT,    // bits
 		UINT,   // bits
-		ARRAY,  // contained
+		PTR,    // contained
 	};
 
 	int tag;
@@ -34,7 +34,7 @@ public:
 
 	static Type makeInt(int bits);
 	static Type makeUInt(int bits);
-	static Type makeArray(const Type &contained);
+	static Type makePointer(const Type &contained);
 	static Type maxType(const Type &a, const Type &b);
 
 	bool isIntegral() const;
@@ -68,7 +68,10 @@ public:
 		LESS,       // e1, e2
 		LESSEQUAL,  // e1, e2
 		CAST,       // e1, type
+		PTRCAST,    // e1, type
 		CALL,       // name, args
+		GET,        // e1, e2
+		REF,        // e1, e2
 
 		CONVERT,    // e1, type
 	};
@@ -92,6 +95,7 @@ public:
 	Expr(int tag, unique_ptr<Expr> &&e1, unique_ptr<Expr> &&e2);
 
 	static Expr makeCast(unique_ptr<Expr> &&e1, const Type &type);
+	static Expr makePtrCast(unique_ptr<Expr> &&e1, const Type &type);
 	static Expr makeCall(const string &name, vector<Expr> &&args);
 	static Expr makeConvert(unique_ptr<Expr> &&e1, const Type &type);
 
@@ -103,6 +107,7 @@ public:
 	enum {
 		DECL,    // decl, expr
 		ASSIGN,  // target, expr
+		STORE,   // targetexpr, expr
 		IF,      // expr, ch[0], ch[1]
 		WHILE,   // expr, ch[0]
 		DO,      // ch
@@ -113,7 +118,7 @@ public:
 
 	int tag;
 	Decl decl;
-	Expr expr;
+	Expr targetexpr, expr;
 	vector<Stmt> ch;
 	string name, target;
 	vector<Expr> args;

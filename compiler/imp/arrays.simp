@@ -1,10 +1,11 @@
 (imp
   (func main () i32
         (do
-          (decl (arr (array u8)) (make_array u8 3))
-          (call (set arr 0 104))
-          (call (set arr 1 11))
-          (call (set arr 2 105))
+          ; (decl (arr (ptr u8)) (call malloc (3)))
+          (decl (arr (ptr u8)) (unsafe-ptr-cast u8 1048576))
+          (asg (ref arr 0) (cast u8 104))
+          (asg (ref arr 1) (cast u8 111))
+          (asg (ref arr 2) (cast u8 105))
           (call putchar ((get arr 0)))
           (call putchar ((get arr 1)))
           (call putchar ((get arr 2))))))

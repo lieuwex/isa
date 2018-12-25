@@ -221,7 +221,13 @@ i64 applyRegalloc(IFunc &ifunc, const unordered_map<Loc, Alloc> &allocation) {
 	int nspilled = 0;
 
 	for (const Loc &loc : locs) {
-		const Alloc &alloc = allocation.find(loc)->second;
+		auto it = allocation.find(loc);
+		if (it == allocation.end()) {
+			cerr << "FAIL: loc " << loc << " not found in allocation" << endl;
+			assert(false);
+		}
+
+		const Alloc &alloc = it->second;
 		if (alloc.tag == Alloc::SPILL) {
 			assert(spillOffset.find(loc) == spillOffset.end());
 			spillOffset[loc] = 8 * nspilled;

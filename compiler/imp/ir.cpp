@@ -283,6 +283,9 @@ ostream& operator<<(ostream &os, const IRIns &ins) {
 				case Arith::SLL: os << "sll"; break;
 				case Arith::SLR: os << "slr"; break;
 				case Arith::SAR: os << "sar"; break;
+				case Arith::AND: os << "and"; break;
+				case Arith::OR: os << "or"; break;
+				case Arith::XOR: os << "xor"; break;
 				default: assert(false);
 			}
 			return os << " " << ins.rd << ", " << ins.r1 << ", " << ins.r2;

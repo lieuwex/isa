@@ -64,6 +64,9 @@ static void printASM(ostream &os, const IRIns &ins) {
 				case Arith::SLL: os << "\tsll"; break;
 				case Arith::SLR: os << "\tslr"; break;
 				case Arith::SAR: os << "\tsar"; break;
+				case Arith::AND: os << "\tand"; break;
+				case Arith::OR: os << "\tor"; break;
+				case Arith::XOR: os << "\txor"; break;
 				default: assert(false);
 			}
 			os << " ";

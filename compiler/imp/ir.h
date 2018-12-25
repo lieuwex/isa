@@ -62,6 +62,9 @@ enum class Arith {
 	SLL,
 	SLR,
 	SAR,
+	AND,
+	OR,
+	XOR,
 };
 
 class IRIns {

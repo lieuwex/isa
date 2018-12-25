@@ -189,6 +189,11 @@ void ToIR::buildWhile(const Stmt &stmt, Id endbb) {
 }
 
 void ToIR::buildDo(const Stmt &stmt, Id endbb) {
+	if (stmt.ch.size() == 0) {
+		B.setTerm(IRTerm::jmp(endbb));
+		return;
+	}
+
 	pushScope();
 
 	for (size_t i = 0; i < stmt.ch.size() - 1; i++) {
@@ -196,7 +201,7 @@ void ToIR::buildDo(const Stmt &stmt, Id endbb) {
 		build(stmt.ch[i], bb);
 		B.switchBB(bb);
 	}
-	if (stmt.ch.size() > 0) build(stmt.ch.back(), endbb);
+	build(stmt.ch.back(), endbb);
 
 	popScope();
 }

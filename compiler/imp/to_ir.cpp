@@ -80,23 +80,27 @@ void ToIR::build(const Function &function) {
 }
 
 Loc ToIR::buildCallGeneric(const string &name, const vector<Expr> &args, Id endbb) {
-	Loc r8 = B.genReg();
-	B.add(IRIns::li(r8, 8));
+	if (args.size() > 0) {
+		Loc r8 = B.genReg();
+		B.add(IRIns::li(r8, 8));
 
-	for (int i = args.size() - 1; i >= 0; i--) {
-		Id bb1 = B.newBB();
-		Loc loc = build(args[i], bb1);
+		for (int i = args.size() - 1; i >= 0; i--) {
+			Id bb1 = B.newBB();
+			Loc loc = build(args[i], bb1);
 
-		B.switchBB(bb1);
-		B.add(IRIns::arith(Arith::SUB, Loc::reg(RSP), Loc::reg(RSP), r8));
-		B.add(IRIns::store(Loc::reg(RSP), loc, args[i].restype.size()));
+			B.switchBB(bb1);
+			B.add(IRIns::arith(Arith::SUB, Loc::reg(RSP), Loc::reg(RSP), r8));
+			B.add(IRIns::store(Loc::reg(RSP), loc, args[i].restype.size()));
+		}
 	}
 
 	B.add(IRIns::call(name));
 
-	Loc sizereg = B.genReg();
-	B.add(IRIns::li(sizereg, 8 * args.size()));
-	B.add(IRIns::arith(Arith::ADD, Loc::reg(RSP), Loc::reg(RSP), sizereg));
+	if (args.size() > 0) {
+		Loc sizereg = B.genReg();
+		B.add(IRIns::li(sizereg, 8 * args.size()));
+		B.add(IRIns::arith(Arith::ADD, Loc::reg(RSP), Loc::reg(RSP), sizereg));
+	}
 
 	B.setTerm(IRTerm::jmp(endbb));
 

@@ -185,7 +185,7 @@ static Expr parseExpr(const SExpr &sexpr) {
 				if (sexpr.list[0] == SExpr("unsafe-ptr-cast")) {
 					return Expr::makePtrCast(
 							make_unique<Expr>(parseExpr(sexpr.list[2])),
-							Type::makePointer(parseType(sexpr.list[1])));
+							parseType(sexpr.list[1]));
 				}
 
 				if (sexpr.list[0] == SExpr("call")) {

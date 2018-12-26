@@ -53,10 +53,11 @@
             (do))
 
           (decl (taken (ptr i64)) (call __malloc_taken ()))
+          (decl (takenval i64) (get taken 0))
           (decl (block (ptr i64))
                 (unsafe-ptr-cast (ptr i64)
-                                 (ref (call __malloc_arena ()) (get taken 0))))
-          (store taken (+ 24 size))
+                                 (ref (call __malloc_arena ()) takenval)))
+          (store taken (+ takenval (+ 24 size)))
 
           (store (call __malloc_block_size (block)) size)
           (store (call __malloc_block_next (block)) (call __null ()))

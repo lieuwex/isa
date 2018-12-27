@@ -258,6 +258,7 @@ impl ParseContext {
         // match the parsed opcode to its configuration, then retrieve the correct
         // values for every field
         match res.opcode.configuration() {
+            Configuration::void => map!(),
             Configuration::imm => map!(immediate: 0),
             Configuration::rd_imm => map!(rd: 0, immediate: 1),
             Configuration::r1_imm => map!(rs1: 0, immediate: 1),

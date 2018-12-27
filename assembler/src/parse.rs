@@ -211,10 +211,21 @@ impl ParseContext {
             };
         }
 
+        let opcode = match str_to_internal_opcode(instr.as_str()) {
+            None => {
+                let description = format!("unkown instruction {}", instr);
+                return Some(Err(ParseError {
+                    description: String::from(description),
+                    line_number,
+                }))
+            }
+            Some(op) => op,
+        };
+
         // the thing we're going to return, parse the instruction from the line too and
         // convert it to its opcode
         let mut res = InternalInstruction {
-            opcode: str_to_internal_opcode(instr.as_str()),
+            opcode,
             rd: 0,
             rs1: 0,
             rs2: 0,

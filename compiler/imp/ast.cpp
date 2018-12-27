@@ -38,6 +38,12 @@ Type& Type::operator=(Type &&other) {
 	return *this;
 }
 
+Type Type::makeVoid() {
+	Type type;
+	type.tag = Type::VOID;
+	return type;
+}
+
 Type Type::makeInt(int bits) {
 	Type type;
 	type.tag = Type::INT;

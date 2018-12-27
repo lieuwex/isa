@@ -16,6 +16,7 @@ using i64 = int64_t;
 class Type {
 public:
 	enum {
+		VOID,   // -
 		INT,    // bits
 		UINT,   // bits
 		PTR,    // contained
@@ -32,6 +33,7 @@ public:
 	Type& operator=(const Type &other);
 	Type& operator=(Type &&other);
 
+	static Type makeVoid();
 	static Type makeInt(int bits);
 	static Type makeUInt(int bits);
 	static Type makePointer(const Type &contained);
@@ -118,6 +120,7 @@ public:
 		CALL,    // name, args
 		CALLR,   // target, name, args
 		RETURN,  // expr
+		RETURNX, // -
 		BREAK,   // -
 	};
 

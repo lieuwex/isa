@@ -30,6 +30,7 @@ private:
 	void buildDo(const Stmt &stmt, Id endbb);
 	void buildCall(const Stmt &stmt, Id endbb, bool hasRet);
 	void buildReturn(const Stmt &stmt, Id endbb);
+	void buildReturnX(const Stmt &stmt, Id endbb);
 	void buildBreak(const Stmt &stmt, Id endbb);
 
 	vector<unordered_map<string, Loc>> stk;
@@ -118,6 +119,7 @@ void ToIR::build(const Stmt &stmt, Id endbb) {
 		case Stmt::CALL: buildCall(stmt, endbb, false); break;
 		case Stmt::CALLR: buildCall(stmt, endbb, true); break;
 		case Stmt::RETURN: buildReturn(stmt, endbb); break;
+		case Stmt::RETURNX: buildReturnX(stmt, endbb); break;
 		case Stmt::BREAK: buildBreak(stmt, endbb); break;
 		default: assert(false);
 	}
@@ -220,6 +222,10 @@ void ToIR::buildCall(const Stmt &stmt, Id endbb, bool hasRet) {
 	}
 
 	B.setTerm(IRTerm::jmp(endbb));
+}
+
+void ToIR::buildReturnX(const Stmt&, Id) {
+	B.setTerm(IRTerm::ret());
 }
 
 void ToIR::buildReturn(const Stmt &stmt, Id) {

@@ -149,6 +149,8 @@ static Type parseType(const SExpr &sexpr) {
 	} else if (sexpr.matchList({SExpr("ptr")})) {
 		if (sexpr.list.size() != 2) throw runtime_error("Invalid array type");
 		return Type::makePointer(parseType(sexpr.list[1]));
+	} else if (sexpr.tag == SExpr::LIST && sexpr.list.size() == 0) {
+		return Type::makeVoid();
 	}
 	throw runtime_error("Unknown type");
 }
@@ -305,9 +307,14 @@ static Stmt parseStmt(const SExpr &sexpr) {
 			stmt.args.push_back(parseExpr(s));
 		}
 	} else if (sexpr.matchList({SExpr("return")})) {
-		if (sexpr.list.size() != 2) throw runtime_error("Invalid return");
-		stmt.tag = Stmt::RETURN;
-		stmt.expr = parseExpr(sexpr.list[1]);
+		if (sexpr.list.size() == 1) {
+			stmt.tag = Stmt::RETURNX;
+		} else if (sexpr.list.size() == 2) {
+			stmt.tag = Stmt::RETURN;
+			stmt.expr = parseExpr(sexpr.list[1]);
+		} else {
+			throw runtime_error("Invalid return");
+		}
 	} else if (sexpr.matchList({SExpr("break")})) {
 		if (sexpr.list.size() != 1) throw runtime_error("Invalid break");
 		stmt.tag = Stmt::BREAK;

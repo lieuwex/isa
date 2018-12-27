@@ -1,5 +1,5 @@
 (imp
-  (func main () i32
+  (func main () ()
         (do
           (decl (arr (ptr u8)) (call malloc (3)))
           ; (decl (arr (ptr u8)) (unsafe-ptr-cast (ptr u8) 1048576))
@@ -39,7 +39,7 @@
   (func __null () (ptr i64)
         (return (unsafe-ptr-cast (ptr i64) 0)))
 
-  (func __malloc_init () u8
+  (func __malloc_init () ()
         (do
           (store (call __malloc_chain_head ()) (unsafe-ptr-cast (ptr i64) 0))
           (store (call __malloc_chain_last ()) (unsafe-ptr-cast (ptr i64) 0))

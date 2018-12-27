@@ -212,6 +212,14 @@ void TypeCheck::check(Stmt &stmt) {
 			break;
 		}
 
+		case Stmt::RETURNX: {
+			const FuncDesc &descr = functions.find(currentFunction)->second;
+			if (descr.first.tag != Type::VOID) {
+				throw runtime_error("Cannot return void in non-void function");
+			}
+			break;
+		}
+
 		case Stmt::BREAK:
 			if (loopDepth == 0) {
 				throw runtime_error("Break statement outside loop");

@@ -29,6 +29,7 @@ pub enum Opcode {
     s32,  // 0b0011001
     l64,  // 0b0011010
     s64,  // 0b0011011
+    debugger,  // 0b0011100
 }
 
 pub fn str_to_opcode(s: &str) -> Option<Opcode> {
@@ -61,6 +62,7 @@ pub fn str_to_opcode(s: &str) -> Option<Opcode> {
         "s32" => Opcode::s32,
         "l64" => Opcode::l64,
         "s64" => Opcode::s64,
+        "debugger" => Opcode::debugger,
 
         _ => return None,
     };
@@ -70,6 +72,7 @@ pub fn str_to_opcode(s: &str) -> Option<Opcode> {
 #[allow(non_camel_case_types)]
 #[derive(Copy, Clone)]
 pub enum Configuration {
+    void,
     imm,
     rd_imm,
     r1_imm,
@@ -113,6 +116,8 @@ impl Opcode {
             Opcode::l64 => Configuration::rd_r1,
             Opcode::not => Configuration::rd_r1,
             Opcode::mv => Configuration::rd_r1,
+
+            Opcode::debugger => Configuration::void,
         }
     }
 }

@@ -318,6 +318,9 @@ static Stmt parseStmt(const SExpr &sexpr) {
 	} else if (sexpr.matchList({SExpr("break")})) {
 		if (sexpr.list.size() != 1) throw runtime_error("Invalid break");
 		stmt.tag = Stmt::BREAK;
+	} else if (sexpr.matchList({SExpr("debugger")})) {
+		if (sexpr.list.size() != 1) throw runtime_error("Invalid debugger");
+		stmt.tag = Stmt::DEBUG;
 	} else {
 		throw runtime_error("Invalid statement");
 	}

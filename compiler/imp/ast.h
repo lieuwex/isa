@@ -122,6 +122,7 @@ public:
 		RETURN,  // expr
 		RETURNX, // -
 		BREAK,   // -
+		DEBUG,   // -
 	};
 
 	int tag;

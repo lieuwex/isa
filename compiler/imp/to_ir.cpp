@@ -32,6 +32,7 @@ private:
 	void buildReturn(const Stmt &stmt, Id endbb);
 	void buildReturnX(const Stmt &stmt, Id endbb);
 	void buildBreak(const Stmt &stmt, Id endbb);
+	void buildDebugger(const Stmt &stmt, Id endbb);
 
 	vector<unordered_map<string, Loc>> stk;
 	vector<Id> loopStk;
@@ -121,6 +122,7 @@ void ToIR::build(const Stmt &stmt, Id endbb) {
 		case Stmt::RETURN: buildReturn(stmt, endbb); break;
 		case Stmt::RETURNX: buildReturnX(stmt, endbb); break;
 		case Stmt::BREAK: buildBreak(stmt, endbb); break;
+		case Stmt::DEBUG: buildDebugger(stmt, endbb); break;
 		default: assert(false);
 	}
 }
@@ -239,6 +241,11 @@ void ToIR::buildReturn(const Stmt &stmt, Id) {
 
 void ToIR::buildBreak(const Stmt&, Id) {
 	B.setTerm(IRTerm::jmp(loopStk.back()));
+}
+
+void ToIR::buildDebugger(const Stmt&, Id endbb) {
+	B.add(IRIns::debugger());
+	B.setTerm(IRTerm::jmp(endbb));
 }
 
 static bool supportedUnsignedArith(const Expr &expr) {

@@ -78,6 +78,7 @@ public:
 		ARITH,  // op, rd, r1, r2
 		CALL,   // name
 		SEXT,   // rd, r1, sizeto, sizefrom
+		DEBUGGER, // -
 	};
 
 	int tag = -1;
@@ -96,6 +97,7 @@ public:
 	static IRIns arith(Arith op, Loc rd, Loc r1, Loc r2);
 	static IRIns call(const string &name);
 	static IRIns signExtend(Loc rd, Loc r1, int sizeto, int sizefrom);
+	static IRIns debugger();
 
 	set<Loc> written() const;
 	set<Loc> read() const;

@@ -82,6 +82,10 @@ static void printASM(ostream &os, const IRIns &ins) {
 			os << "\tcall r14, " << ins.name << endl;
 			break;
 
+		case IRIns::DEBUGGER:
+			os << "\tdebugger" << endl;
+			break;
+
 		default:
 			assert(false);
 	}

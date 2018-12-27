@@ -226,6 +226,9 @@ void TypeCheck::check(Stmt &stmt) {
 			}
 			break;
 
+		case Stmt::DEBUG:
+			break;
+
 		default: assert(false);
 	}
 }

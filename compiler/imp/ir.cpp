@@ -74,6 +74,12 @@ IRIns IRIns::signExtend(Loc rd, Loc r1, int sizeto, int sizefrom) {
 	return ins;
 }
 
+IRIns IRIns::debugger() {
+	IRIns ins;
+	ins.tag = DEBUGGER;
+	return ins;
+}
+
 set<Loc> IRIns::written() const {
 	switch (tag) {
 		case NOP: return {};
@@ -84,6 +90,7 @@ set<Loc> IRIns::written() const {
 		case ARITH: return {rd};
 		case CALL: return {};
 		case SEXT: return {rd};
+		case DEBUGGER: return {};
 		default: assert(false);
 	}
 }
@@ -98,6 +105,7 @@ set<Loc> IRIns::read() const {
 		case ARITH: return {r1, r2};
 		case CALL: return {};
 		case SEXT: return {r1};
+		case DEBUGGER: return {};
 		default: assert(false);
 	}
 }
@@ -112,6 +120,7 @@ void IRIns::forEachRead(function<void(Loc&)> f) {
 		case ARITH: f(r1); f(r2); break;
 		case CALL: break;
 		case SEXT: f(r1); break;
+		case DEBUGGER: break;
 		default: assert(false);
 	}
 }
@@ -126,6 +135,7 @@ void IRIns::forEachWrite(function<void(Loc&)> f) {
 		case ARITH: f(rd); break;
 		case CALL: break;
 		case SEXT: f(rd); break;
+		case DEBUGGER: break;
 		default: assert(false);
 	}
 }
@@ -295,6 +305,9 @@ ostream& operator<<(ostream &os, const IRIns &ins) {
 
 		case IRIns::SEXT:
 			return os << "sext" << ins.sizeto << "." << ins.sizefrom << " " << ins.rd << ", " << ins.r1;
+
+		case IRIns::DEBUGGER:
+			return os << "debugger";
 
 		default:
 			assert(false);

@@ -81,6 +81,20 @@
                    (asg block (get (call __malloc_block_next (block)) 0))))
           (return block)))
 
+  (func __malloc_bail () ()
+        (do
+          (call putchar ((cast u8 109)))
+          (call putchar ((cast u8 97)))
+          (call putchar ((cast u8 108)))
+          (call putchar ((cast u8 108)))
+          (call putchar ((cast u8 111)))
+          (call putchar ((cast u8 99)))
+          (call putchar ((cast u8 32)))
+          (call putchar ((cast u8 101)))
+          (call putchar ((cast u8 114)))
+          (call putchar ((cast u8 114)))
+          (call putchar ((cast u8 10)))))
+
   (func malloc ((size i64)) (ptr u8)
         (do
           (if (= size 0)
@@ -97,4 +111,18 @@
                 (do))))
 
           (store (call __malloc_block_free (block)) 0)
-          (return (unsafe-ptr-cast (ptr u8) (ref block 3))))))
+          (return (unsafe-ptr-cast (ptr u8) (ref block 3)))))
+
+  (func free ((p (ptr u8))) ()
+        (do
+          (if (= p (unsafe-ptr-cast (ptr u8) (call __null ())))
+            (return)
+            (do))
+
+          (decl (block (ptr i64))
+                (ref (unsafe-ptr-cast (ptr i64) p) -3))
+          (if (>= (get (call __malloc_block_free (block)) 0) 0)
+            (call __malloc_bail ())
+            (do))
+
+          (store (call __malloc_block_free (block)) 1))))

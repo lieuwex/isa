@@ -147,6 +147,11 @@ impl CPU {
             done = true;
         }
 
+        if !done && instr.opcode == Opcode::debugger {
+            println!("{:?}\n", self.regs);
+            done = true;
+        }
+
         if !done {
             panic!("unhandled instruction: {:?}", instr);
         }

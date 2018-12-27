@@ -29,6 +29,7 @@ pub enum Opcode {
     s32,  // 0b0011001
     l64,  // 0b0011010
     s64,  // 0b0011011
+    debugger,  // 0b0011100
     unknown,
 }
 
@@ -62,6 +63,7 @@ pub fn u8_to_opcode(opcode: u8) -> Opcode {
         0b0011001 => Opcode::s32,
         0b0011010 => Opcode::l64,
         0b0011011 => Opcode::s64,
+        0b0011100 => Opcode::debugger,
 
         _ => Opcode::unknown,
     }

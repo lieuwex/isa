@@ -21,11 +21,12 @@ fn main() -> Result<(), io::Error> {
 
     let s = fs::read_to_string(fname)?;
 
+    let mut err = false;
     for instr in parse(&s) {
         match instr {
             Err(s) => {
                 eprintln!("{}", s);
-                exit(1);
+                err = true;
             }
             Ok(instr) => {
                 let instrs = convert_instruction(&instr);
@@ -38,5 +39,8 @@ fn main() -> Result<(), io::Error> {
         }
     }
 
+    if err {
+        exit(1);
+    }
     Ok(())
 }

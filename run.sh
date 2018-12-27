@@ -8,4 +8,6 @@ cd ./emulator
 cargo build
 cd ..
 
-./emulator/target/debug/emulator <(./assembler/target/debug/assembler $1)
+temp_file=$(mktemp)
+./assembler/target/debug/assembler $1 >$temp_file \
+	&& ./emulator/target/debug/emulator $temp_file

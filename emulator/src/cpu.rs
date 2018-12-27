@@ -162,7 +162,7 @@ impl CPU {
 
             let instr = self.get_instruction()?;
             if self.debug_mode {
-                println!("{:?}\n{:?}\n", self.regs, instr);
+                println!("{:?}   {:?}", self.regs, instr);
             }
             self.inc_pc();
             self.execute(&instr);

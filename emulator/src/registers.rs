@@ -26,10 +26,10 @@ impl fmt::Debug for Registers {
     fn fmt(&self, f: &mut fmt::Formatter) -> result::Result<(), fmt::Error> {
         for (i, reg) in self.regs.iter().enumerate() {
             if i > 0 {
-                writeln!(f, "")?;
+                write!(f, " ")?;
             }
 
-            write!(f, "{} {}", i, reg)?;
+            write!(f, "r{}={}", i, reg)?;
         }
 
         Ok(())

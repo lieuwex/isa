@@ -162,7 +162,7 @@ void ToIR::buildIf(const Stmt &stmt, Id endbb) {
 	B.switchBB(bb1);
 	Id bbT = B.newBB();
 	Id bbF = B.newBB();
-	B.setTerm(IRTerm::jz(eloc, bbT, bbF));
+	B.setTerm(IRTerm::jz(eloc, bbF, bbT));
 
 	B.switchBB(bbT);
 	build(stmt.ch[0], endbb);

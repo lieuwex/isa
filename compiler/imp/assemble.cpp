@@ -124,9 +124,11 @@ static void collectRegs(const BB &bb, set<Loc> &usedRegs) {
 }
 
 static void calleeSaveRegisters(IFunc &ifunc, const set<Loc> &usedRegs) {
+	vector<Loc> usedRegsOrder(usedRegs.begin(), usedRegs.end());
+
 	vector<IRIns> prefix;
 	prefix.push_back(IRIns::li(Loc::reg(RLINK), 8));
-	for (const Loc &loc : usedRegs) {
+	for (const Loc &loc : usedRegsOrder) {
 		prefix.push_back(IRIns::arith(Arith::SUB, Loc::reg(RSP), Loc::reg(RSP), Loc::reg(RLINK)));
 		prefix.push_back(IRIns::store(Loc::reg(RSP), loc, 8));
 	}
@@ -134,9 +136,11 @@ static void calleeSaveRegisters(IFunc &ifunc, const set<Loc> &usedRegs) {
 	BB &startBB = ifunc.BBs[0];
 	startBB.inss.insert(startBB.inss.begin(), prefix.begin(), prefix.end());
 
+	reverse(usedRegsOrder.begin(), usedRegsOrder.end());
+
 	vector<IRIns> suffix;
 	suffix.push_back(IRIns::li(Loc::reg(RLINK), 8));
-	for (const Loc &loc : usedRegs) {
+	for (const Loc &loc : usedRegsOrder) {
 		suffix.push_back(IRIns::load(loc, Loc::reg(RSP), 8));
 		suffix.push_back(IRIns::arith(Arith::ADD, Loc::reg(RSP), Loc::reg(RSP), Loc::reg(RLINK)));
 	}

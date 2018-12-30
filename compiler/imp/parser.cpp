@@ -2,79 +2,149 @@
 #include <cctype>
 #include <cassert>
 #include "parser.h"
+#include "error.h"
 
 using namespace std;
 
 
-static void skipWhite(string_view &s) {
-	s.remove_prefix(min(s.size(), s.find_first_not_of(" \n\t")));
+class SourceView {
+public:
+	SourceView(string_view sv, const string &fname);
+
+	void skip(size_t num);
+	string substr(size_t from, size_t len) const;
+	size_t remaining() const;
+	size_t find(char ch) const;
+	size_t find_first_of(const char *set) const;
+	size_t find_first_not_of(const char *set) const;
+	Site site() const;
+	char operator[](size_t idx) const;
+
+	static const size_t npos = string_view::npos;
+
+private:
+	string_view sv;
+	Site siteval;
+};
+
+SourceView::SourceView(string_view sv, const string &fname)
+		: sv(sv), siteval(fname, 1, 1) {}
+
+void SourceView::skip(size_t num) {
+	num = min(num, remaining());
+
+	for (size_t i = 0; i < num; i++) {
+		if (sv[i] == '\n') {
+			siteval.line++;
+			siteval.col = 1;
+		} else {
+			siteval.col++;
+		}
+	}
+
+	sv.remove_prefix(num);
 }
 
-static void skipWhiteComment(string_view &s) {
+string SourceView::substr(size_t from, size_t len) const {
+	return string(sv.begin() + from, sv.begin() + from + len);
+}
+
+size_t SourceView::remaining() const {
+	return sv.size();
+}
+
+size_t SourceView::find(char ch) const {
+	return sv.find(ch);
+}
+
+size_t SourceView::find_first_of(const char *set) const {
+	return sv.find_first_of(set);
+}
+
+size_t SourceView::find_first_not_of(const char *set) const {
+	return sv.find_first_not_of(set);
+}
+
+Site SourceView::site() const {
+	return siteval;
+}
+
+char SourceView::operator[](size_t idx) const {
+	return sv[idx];
+}
+
+
+static void skipWhite(SourceView &s) {
+	s.skip(min(s.remaining(), s.find_first_not_of(" \n\t")));
+}
+
+static void skipWhiteComment(SourceView &s) {
 	while (true) {
 		skipWhite(s);
-		if (s.size() == 0 || s[0] != ';') break;
-		size_t idx = s.find('\n');
-		if (idx == string_view::npos) idx = s.size();
-		s.remove_prefix(idx);
+		if (s.remaining() == 0 || s[0] != ';') break;
+		s.skip(min(s.remaining(), s.find('\n')));
 	}
 }
 
-static i64 svtoI(string_view &s) {
+static i64 svtoI(SourceView &s) {
 	skipWhite(s);
-	if (s.size() == 0) throw invalid_argument("Cannot parse number");
+	if (s.remaining() == 0) throw ParseError(s.site(), "Cannot parse number");
 
 	bool neg = false;
 	if (s[0] == '-') {
-		if (s.size() == 1 || !isdigit(s[1])) throw invalid_argument("Cannot parse number");
-		s.remove_prefix(1);
+		if (s.remaining() == 1 || !isdigit(s[1])) throw ParseError(s.site(), "Cannot parse number");
+		s.skip(1);
 		neg = true;
 	}
 
 	size_t idx = s.find_first_not_of("0123456789");
-	if (idx == string_view::npos) idx = s.size();
+	if (idx == SourceView::npos) idx = s.remaining();
 
-	string str(s.begin(), s.begin() + idx);
-	s.remove_prefix(idx);
+	string str = s.substr(0, idx);
+	s.skip(idx);
 
 	return (neg ? -1 : 1) * stoll(str);
 }
 
-static SExpr goParse(string_view &s) {
+static SExpr goParse(const string &fname, SourceView &s) {
 	skipWhiteComment(s);
-	if (s.size() == 0) throw runtime_error("Expected s-expression");
+	if (s.remaining() == 0) {
+		throw ParseError(s.site(), "Expected s-expression: maybe unterminated s-list");
+	}
 
 	SExpr res;
 	if (s[0] == '(') {
-		s.remove_prefix(1);
+		res.site = s.site();
+		s.skip(1);
 		res.tag = SExpr::LIST;
 
 		while (true) {
 			skipWhiteComment(s);
-			if (s.size() > 0 && s[0] == ')') {
-				s.remove_prefix(1);
+			if (s.remaining() > 0 && s[0] == ')') {
+				s.skip(1);
 				break;
 			}
-			res.list.push_back(goParse(s));
+			res.list.push_back(goParse(fname, s));
 		}
 	} else {
+		res.site = s.site();
 		try {
 			res.number = svtoI(s);
 			res.tag = SExpr::NUMBER;
 		} catch (...) {
-			size_t idx = s.find_first_of("() \n\t");
-			if (idx == string_view::npos) idx = s.size();
-			res.word = string(s.begin(), s.begin() + idx);
+			size_t idx = min(s.remaining(), s.find_first_of("() \n\t"));
+			res.word = s.substr(0, idx);
 			res.tag = SExpr::WORD;
-			s.remove_prefix(idx);
+			s.skip(idx);
 		}
 	}
 
 	return res;
 }
 
-SExpr SExpr::parse(string_view source) {
-	return goParse(source);
+SExpr SExpr::parse(const string &fname, string_view source) {
+	SourceView sv(source, fname);
+	return goParse(fname, sv);
 }
 
 SExpr::SExpr(i64 number)
@@ -138,81 +208,106 @@ ostream& operator<<(ostream &os, const SExpr &s) {
 
 static Type parseType(const SExpr &sexpr) {
 	if (sexpr.tag == SExpr::WORD) {
-		if (sexpr.word == "i8") return Type::makeInt(8);
-		else if (sexpr.word == "i16") return Type::makeInt(16);
-		else if (sexpr.word == "i32") return Type::makeInt(32);
-		else if (sexpr.word == "i64") return Type::makeInt(64);
-		else if (sexpr.word == "u8") return Type::makeUInt(8);
-		else if (sexpr.word == "u16") return Type::makeUInt(16);
-		else if (sexpr.word == "u32") return Type::makeUInt(32);
-		else if (sexpr.word == "u64") return Type::makeUInt(64);
+		Type res;
+		if (sexpr.word == "i8") res = Type::makeInt(8);
+		else if (sexpr.word == "i16") res = Type::makeInt(16);
+		else if (sexpr.word == "i32") res = Type::makeInt(32);
+		else if (sexpr.word == "i64") res = Type::makeInt(64);
+		else if (sexpr.word == "u8") res = Type::makeUInt(8);
+		else if (sexpr.word == "u16") res = Type::makeUInt(16);
+		else if (sexpr.word == "u32") res = Type::makeUInt(32);
+		else if (sexpr.word == "u64") res = Type::makeUInt(64);
+		else throw ParseError(sexpr.site, "Unknown type name");
+		res.site = sexpr.site;
+		return res;
 	} else if (sexpr.matchList({SExpr("ptr")})) {
-		if (sexpr.list.size() != 2) throw runtime_error("Invalid array type");
-		return Type::makePointer(parseType(sexpr.list[1]));
+		if (sexpr.list.size() != 2) throw ParseError(sexpr.site, "Invalid pointer type");
+		Type res = Type::makePointer(parseType(sexpr.list[1]));
+		res.site = sexpr.site;
+		return res;
 	} else if (sexpr.tag == SExpr::LIST && sexpr.list.size() == 0) {
-		return Type::makeVoid();
+		Type res = Type::makeVoid();
+		res.site = sexpr.site;
+		return res;
 	}
-	throw runtime_error("Unknown type");
+	throw ParseError(sexpr.site, "Unknown type");
 }
 
 static Decl parseDecl(const SExpr &sexpr) {
 	if (sexpr.tag != SExpr::LIST ||
 			sexpr.list.size() != 2 ||
 			sexpr.list[0].tag != SExpr::WORD) {
-		throw runtime_error("Invalid decl");
+		throw ParseError(sexpr.site, "Invalid decl");
 	}
 
 	Decl decl;
 	decl.name = sexpr.list[0].word;
 	decl.type = parseType(sexpr.list[1]);
+	decl.site = sexpr.site;
 	return decl;
 }
 
 static Expr parseExpr(const SExpr &sexpr) {
 	switch (sexpr.tag) {
-		case SExpr::NUMBER:
-			return Expr(sexpr.number);
+		case SExpr::NUMBER: {
+			Expr e = Expr(sexpr.number);
+			e.site = {sexpr.site};
+			return e;
+		}
 
-		case SExpr::WORD:
-			return Expr(sexpr.word);
+		case SExpr::WORD: {
+			Expr e = Expr(sexpr.word);
+			e.site = {sexpr.site};
+			return e;
+		}
 
 		case SExpr::LIST:
 			if (sexpr.list.size() == 3) {
 				if (sexpr.list[0] == SExpr("cast")) {
-					return Expr::makeCast(
+					Expr e = Expr::makeCast(
 							make_unique<Expr>(parseExpr(sexpr.list[2])),
 							parseType(sexpr.list[1]));
+					e.site = {sexpr.site};
+					return e;
 				}
 
 				if (sexpr.list[0] == SExpr("unsafe-ptr-cast")) {
-					return Expr::makePtrCast(
+					Expr e = Expr::makePtrCast(
 							make_unique<Expr>(parseExpr(sexpr.list[2])),
 							parseType(sexpr.list[1]));
+					e.site = {sexpr.site};
+					return e;
 				}
 
 				if (sexpr.list[0] == SExpr("call")) {
 					if (sexpr.list[1].tag != SExpr::WORD ||
 							sexpr.list[2].tag != SExpr::LIST) {
-						throw runtime_error("Invalid call in expression");
+						throw ParseError(sexpr.site, "Invalid call in expression");
 					}
 
 					vector<Expr> args;
 					for (const SExpr &s : sexpr.list[2].list) {
 						args.push_back(parseExpr(s));
 					}
-					return Expr::makeCall(sexpr.list[1].word, move(args));
+					Expr e = Expr::makeCall(sexpr.list[1].word, move(args));
+					e.site = {sexpr.site};
+					return e;
 				}
 
 				if (sexpr.list[0] == SExpr("get")) {
-					return Expr(Expr::GET,
+					Expr e = Expr(Expr::GET,
 							make_unique<Expr>(parseExpr(sexpr.list[1])),
 							make_unique<Expr>(parseExpr(sexpr.list[2])));
+					e.site = {sexpr.site};
+					return e;
 				}
 
 				if (sexpr.list[0] == SExpr("ref")) {
-					return Expr(Expr::REF,
+					Expr e = Expr(Expr::REF,
 							make_unique<Expr>(parseExpr(sexpr.list[1])),
 							make_unique<Expr>(parseExpr(sexpr.list[2])));
+					e.site = {sexpr.site};
+					return e;
 				}
 
 				int tag = -1;
@@ -233,13 +328,15 @@ static Expr parseExpr(const SExpr &sexpr) {
 				else if (sexpr.list[0] == SExpr("||")) tag = Expr::BOOLOR;
 
 				if (tag != -1) {
-					return Expr(tag,
+					Expr e = Expr(tag,
 							make_unique<Expr>(parseExpr(sexpr.list[idx1])),
 							make_unique<Expr>(parseExpr(sexpr.list[idx2])));
+					e.site = {sexpr.site};
+					return e;
 				}
 			}
 
-			throw runtime_error("Invalid expr term");
+			throw ParseError(sexpr.site, "Invalid expr term");
 
 		default:
 			assert(false);
@@ -250,30 +347,30 @@ static Stmt parseStmt(const SExpr &sexpr) {
 	Stmt stmt;
 
 	if (sexpr.matchList({SExpr("decl")})) {
-		if (sexpr.list.size() != 3) throw runtime_error("Invalid var decl");
+		if (sexpr.list.size() != 3) throw ParseError(sexpr.site, "Invalid var decl");
 		stmt.tag = Stmt::DECL;
 		stmt.decl = parseDecl(sexpr.list[1]);
 		stmt.expr = parseExpr(sexpr.list[2]);
 	} else if (sexpr.matchList({SExpr("asg")})) {
 		if (sexpr.list.size() != 3 || sexpr.list[1].tag != SExpr::WORD) {
-			throw runtime_error("Invalid assignment");
+			throw ParseError(sexpr.site, "Invalid assignment");
 		}
 		stmt.tag = Stmt::ASSIGN;
 		stmt.target = sexpr.list[1].word;
 		stmt.expr = parseExpr(sexpr.list[2]);
 	} else if (sexpr.matchList({SExpr("store")})) {
-		if (sexpr.list.size() != 3) throw runtime_error("Invalid store");
+		if (sexpr.list.size() != 3) throw ParseError(sexpr.site, "Invalid store");
 		stmt.tag = Stmt::STORE;
 		stmt.targetexpr = parseExpr(sexpr.list[1]);
 		stmt.expr = parseExpr(sexpr.list[2]);
 	} else if (sexpr.matchList({SExpr("if")})) {
-		if (sexpr.list.size() != 4) throw runtime_error("Invalid if");
+		if (sexpr.list.size() != 4) throw ParseError(sexpr.site, "Invalid if");
 		stmt.tag = Stmt::IF;
 		stmt.expr = parseExpr(sexpr.list[1]);
 		stmt.ch.push_back(parseStmt(sexpr.list[2]));
 		stmt.ch.push_back(parseStmt(sexpr.list[3]));
 	} else if (sexpr.matchList({SExpr("while")})) {
-		if (sexpr.list.size() != 3) throw runtime_error("Invalid while");
+		if (sexpr.list.size() != 3) throw ParseError(sexpr.site, "Invalid while");
 		stmt.tag = Stmt::WHILE;
 		stmt.expr = parseExpr(sexpr.list[1]);
 		stmt.ch.push_back(parseStmt(sexpr.list[2]));
@@ -286,7 +383,7 @@ static Stmt parseStmt(const SExpr &sexpr) {
 		if (sexpr.list.size() != 3 ||
 				sexpr.list[1].tag != SExpr::WORD ||
 				sexpr.list[2].tag != SExpr::LIST) {
-			throw runtime_error("Invalid call");
+			throw ParseError(sexpr.site, "Invalid call");
 		}
 		stmt.tag = Stmt::CALL;
 		stmt.name = sexpr.list[1].word;
@@ -298,7 +395,7 @@ static Stmt parseStmt(const SExpr &sexpr) {
 				sexpr.list[1].tag != SExpr::WORD ||
 				sexpr.list[2].tag != SExpr::WORD ||
 				sexpr.list[3].tag != SExpr::LIST) {
-			throw runtime_error("Invalid call");
+			throw ParseError(sexpr.site, "Invalid call");
 		}
 		stmt.tag = Stmt::CALLR;
 		stmt.target = sexpr.list[1].word;
@@ -313,17 +410,19 @@ static Stmt parseStmt(const SExpr &sexpr) {
 			stmt.tag = Stmt::RETURN;
 			stmt.expr = parseExpr(sexpr.list[1]);
 		} else {
-			throw runtime_error("Invalid return");
+			throw ParseError(sexpr.site, "Invalid return");
 		}
 	} else if (sexpr.matchList({SExpr("break")})) {
-		if (sexpr.list.size() != 1) throw runtime_error("Invalid break");
+		if (sexpr.list.size() != 1) throw ParseError(sexpr.site, "Invalid break");
 		stmt.tag = Stmt::BREAK;
 	} else if (sexpr.matchList({SExpr("debugger")})) {
-		if (sexpr.list.size() != 1) throw runtime_error("Invalid debugger");
+		if (sexpr.list.size() != 1) throw ParseError(sexpr.site, "Invalid debugger");
 		stmt.tag = Stmt::DEBUG;
 	} else {
-		throw runtime_error("Invalid statement");
+		throw ParseError(sexpr.site, "Invalid statement");
 	}
+
+	stmt.site = sexpr.site;
 
 	return stmt;
 }
@@ -333,7 +432,7 @@ static Function parseFunction(const SExpr &sexpr) {
 			sexpr.list.size() != 5 ||
 			sexpr.list[1].tag != SExpr::WORD ||
 			sexpr.list[2].tag != SExpr::LIST) {
-		throw runtime_error("Invalid function decl");
+		throw ParseError(sexpr.site, "Invalid function decl");
 	}
 
 	Function f;
@@ -343,11 +442,12 @@ static Function parseFunction(const SExpr &sexpr) {
 	}
 	f.ret = parseType(sexpr.list[3]);
 	f.body = parseStmt(sexpr.list[4]);
+	f.site = sexpr.site;
 	return f;
 }
 
 Program parseProgram(const SExpr &sexpr) {
-	if (!sexpr.matchList({SExpr("imp")})) throw runtime_error("Invalid program");
+	if (!sexpr.matchList({SExpr("imp")})) throw ParseError(sexpr.site, "Invalid program");
 
 	Program program;
 	for (size_t i = 1; i < sexpr.list.size(); i++) {

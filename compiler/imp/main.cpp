@@ -12,6 +12,7 @@
 #include "regalloc.h"
 #include "assemble.h"
 #include "print_asm.h"
+#include "error.h"
 
 using namespace std;
 
@@ -31,20 +32,33 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 
+	const string fname = argv[1];
+
 	string source;
 	{
-		ifstream file(argv[1]);
+		ifstream file(fname);
 		readfull(file, source);
 	}
 
-	Program program = parseProgram(SExpr::parse(source));
+	Program program;
+	try {
+		program = parseProgram(SExpr::parse(fname, source));
+	} catch (ParseError &e) {
+		cerr << e.site() << ": " << e.what() << endl;
+		return 1;
+	}
 
 	// for (const Function &function : program.functions) {
 	//     function.body.writeProlog(cerr);
 	//     cerr << endl;
 	// }
 
-	typecheck(program);
+	try {
+		typecheck(program);
+	} catch (TypeError &e) {
+		cerr << e.site() << ": " << e.what() << endl;
+		return 1;
+	}
 
 	IR ir = toIR(program);
 	cerr << ir << endl;

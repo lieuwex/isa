@@ -5,12 +5,13 @@ using namespace std;
 
 
 Type::Type(const Type &other)
-		: tag(other.tag), bits(other.bits) {
+		: tag(other.tag), bits(other.bits), site(other.site) {
 	if (other.contained) contained = new Type(*other.contained);
 }
 
 Type::Type(Type &&other)
-		: tag(other.tag), bits(other.bits), contained(other.contained) {
+		: tag(other.tag), bits(other.bits), contained(other.contained),
+		  site(move(other.site)) {
 	other.tag = Type::INT;
 	other.bits = 64;
 	other.contained = nullptr;
@@ -25,6 +26,7 @@ Type& Type::operator=(const Type &other) {
 	bits = other.bits;
 	contained = other.contained;
 	if (contained) contained = new Type(*contained);
+	site = other.site;
 	return *this;
 }
 
@@ -32,6 +34,7 @@ Type& Type::operator=(Type &&other) {
 	tag = other.tag;
 	bits = other.bits;
 	contained = other.contained;
+	site = move(other.site);
 	other.tag = Type::INT;
 	other.bits = 64;
 	other.contained = nullptr;
@@ -65,11 +68,11 @@ Type Type::makePointer(const Type &contained) {
 	return type;
 }
 
-Type Type::maxType(const Type &a, const Type &b) {
+optional<Type> Type::maxType(const Type &a, const Type &b) {
 	if (a == b) return a;
 	if (a.tag == INT && b.tag == INT) return makeInt(max(a.bits, b.bits));
 	if (a.tag == UINT && b.tag == UINT) return makeUInt(max(a.bits, b.bits));
-	throw runtime_error("Cannot compute maximum type of incompatible types");
+	return nullopt;
 }
 
 bool Type::isIntegral() const {

@@ -1,6 +1,7 @@
 #include <cassert>
 #include "to_ir.h"
 #include "ir_builder.h"
+#include "error.h"
 
 using namespace std;
 
@@ -134,7 +135,7 @@ void ToIR::buildDecl(const Stmt &stmt, Id endbb) {
 
 void ToIR::buildAssign(const Stmt &stmt, Id endbb) {
 	Loc loc = lookup(stmt.target);
-	if (loc.tag == -1) throw runtime_error("Assignment to undeclared variable");
+	if (loc.tag == -1) throw TypeError(stmt.site, "Assignment to undeclared variable");
 
 	Id bb1 = B.newBB();
 	Loc eloc = build(stmt.expr, bb1);
@@ -218,7 +219,7 @@ void ToIR::buildCall(const Stmt &stmt, Id endbb, bool hasRet) {
 
 	if (hasRet) {
 		Loc loc = lookup(stmt.target);
-		if (loc.tag == -1) throw runtime_error("Call asg to undefined variable");
+		if (loc.tag == -1) throw TypeError(stmt.site, "Call asg to undefined variable");
 
 		B.add(IRIns::mov(loc, retreg));
 	}
@@ -274,7 +275,7 @@ Loc ToIR::build(const Expr &expr, Id endbb) {
 
 		case Expr::VARIABLE: {
 			Loc loc = lookup(expr.name);
-			if (loc.tag == -1) throw runtime_error("IR: Use of undeclared variable");
+			if (loc.tag == -1) throw TypeError(expr.site, "Use of undeclared variable");
 			B.setTerm(IRTerm::jmp(endbb));
 			return loc;
 		}
@@ -299,7 +300,7 @@ Loc ToIR::build(const Expr &expr, Id endbb) {
 			assert(expr.e1->restype.tag == expr.e2->restype.tag);
 			assert(expr.e1->restype.size() == expr.e2->restype.size());
 			if (expr.e1->restype.tag == Type::UINT && !supportedUnsignedArith(expr)) {
-				throw runtime_error("Unsupported arithmetic operation on unsigned operands");
+				throw TypeError(expr.site, "Unsupported arithmetic operation on unsigned operands");
 			}
 
 			B.switchBB(bb2);
@@ -359,7 +360,7 @@ Loc ToIR::build(const Expr &expr, Id endbb) {
 					resloc = loc;
 				}
 			} else {
-				throw runtime_error("Cannot convert between incompatible types");
+				throw TypeError(expr.site, "Cannot convert between incompatible types");
 			}
 
 			B.setTerm(IRTerm::jmp(endbb));

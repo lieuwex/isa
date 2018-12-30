@@ -6,6 +6,7 @@
 #include <memory>
 #include <optional>
 #include <cstdint>
+#include "site.h"
 
 using namespace std;
 
@@ -26,6 +27,8 @@ public:
 	int bits;
 	Type *contained = nullptr;
 
+	Site site;
+
 	Type() = default;
 	Type(const Type &other);
 	Type(Type &&other);
@@ -37,7 +40,7 @@ public:
 	static Type makeInt(int bits);
 	static Type makeUInt(int bits);
 	static Type makePointer(const Type &contained);
-	static Type maxType(const Type &a, const Type &b);
+	static optional<Type> maxType(const Type &a, const Type &b);
 
 	bool isIntegral() const;
 	int size() const;
@@ -53,6 +56,8 @@ class Decl {
 public:
 	string name;
 	Type type;
+
+	Site site;
 
 	void writeProlog(ostream &os) const;
 };
@@ -88,6 +93,8 @@ public:
 	unique_ptr<Expr> e1, e2;
 	vector<Expr> args;
 	Type type;
+
+	Site site;
 
 	// The type of the expression, annotated by the type checker
 	Type restype;
@@ -132,6 +139,8 @@ public:
 	string name, target;
 	vector<Expr> args;
 
+	Site site;
+
 	void writeProlog(ostream &os) const;
 };
 
@@ -141,6 +150,8 @@ public:
 	vector<Decl> args;
 	Type ret;
 	Stmt body;
+
+	Site site;
 };
 
 class Program {

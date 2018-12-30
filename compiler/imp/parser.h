@@ -21,8 +21,9 @@ public:
 	string word;
 	i64 number;
 	vector<SExpr> list;
+	Site site;
 
-	static SExpr parse(string_view source);
+	static SExpr parse(const string &fname, string_view source);
 
 	SExpr() = default;
 	SExpr(i64 number);

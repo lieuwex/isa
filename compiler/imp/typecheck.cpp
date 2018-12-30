@@ -4,6 +4,7 @@
 #include <stdexcept>
 #include <cassert>
 #include "typecheck.h"
+#include "error.h"
 
 using namespace std;
 
@@ -27,10 +28,10 @@ private:
 
 	void enterScope();
 	void leaveScope();
-	void addBinding(const string &name, const Type &type);
+	void addBinding(const Decl &decl);
 	Type lookup(const string &name);  // returns tag==-1 if not found
 
-	Type checkCall(const string &name, vector<Expr> &args);
+	Type checkCall(const Site &site, const string &name, vector<Expr> &args);
 };
 
 TypeCheck::~TypeCheck() {
@@ -45,9 +46,9 @@ void TypeCheck::leaveScope() {
 	stk.pop_back();
 }
 
-void TypeCheck::addBinding(const string &name, const Type &type) {
-	if (!stk.back().emplace(name, type).second) {
-		throw runtime_error("Variable already declared in scope");
+void TypeCheck::addBinding(const Decl &decl) {
+	if (!stk.back().emplace(decl.name, decl.type).second) {
+		throw TypeError(decl.site, "Variable already declared in scope");
 	}
 }
 
@@ -66,7 +67,7 @@ void TypeCheck::check(Program &program) {
 		vector<Type> argtypes;
 		for (const Decl &decl : f.args) argtypes.push_back(decl.type);
 		if (!functions.emplace(f.name, make_pair(f.ret, argtypes)).second) {
-			throw runtime_error("Duplicate function declaration");
+			throw TypeError(f.site, "Duplicate function declaration");
 		}
 	}
 
@@ -83,7 +84,7 @@ void TypeCheck::check(Function &func) {
 	currentFunction = func.name;
 
 	for (const Decl &decl : func.args) {
-		addBinding(decl.name, decl.type);
+		addBinding(decl);
 	}
 
 	check(func.body);
@@ -101,24 +102,24 @@ void possiblyCoerceInt(Expr &expr, const Type &wanted) {
 	}
 }
 
-Type TypeCheck::checkCall(const string &name, vector<Expr> &args) {
+Type TypeCheck::checkCall(const Site &site, const string &name, vector<Expr> &args) {
 	auto it = functions.find(name);
 	if (it == functions.end()) {
-		throw runtime_error("Call to undefined function");
+		throw TypeError(site, "Call to undefined function");
 	}
 
 	const FuncDesc &descr = it->second;
 	Type rettype = descr.first;
 
 	if (args.size() != descr.second.size()) {
-		throw runtime_error("Invalid number of arguments in function call");
+		throw TypeError(site, "Invalid number of arguments in function call");
 	}
 
 	for (size_t i = 0; i < args.size(); i++) {
 		check(args[i]);
 		possiblyCoerceInt(args[i], descr.second[i]);
 		if (args[i].restype != descr.second[i]) {
-			throw runtime_error("Invalid type in argument in function call");
+			throw TypeError(site, "Invalid type in argument in function call");
 		}
 	}
 
@@ -131,20 +132,20 @@ void TypeCheck::check(Stmt &stmt) {
 			check(stmt.expr);
 			possiblyCoerceInt(stmt.expr, stmt.decl.type);
 			if (stmt.expr.restype != stmt.decl.type) {
-				throw runtime_error("Unequal types in variable initialisation");
+				throw TypeError(stmt.site, "Unequal types in variable initialisation");
 			}
-			addBinding(stmt.decl.name, stmt.decl.type);
+			addBinding(stmt.decl);
 			break;
 
 		case Stmt::ASSIGN: {
 			Type type = lookup(stmt.target);
 			if (type.tag == -1) {
-				throw runtime_error("Assignment to undeclared variable");
+				throw TypeError(stmt.site, "Assignment to undeclared variable");
 			}
 			check(stmt.expr);
 			possiblyCoerceInt(stmt.expr, type);
 			if (stmt.expr.restype != type) {
-				throw runtime_error("Unequal types in variable assignment");
+				throw TypeError(stmt.site, "Unequal types in variable assignment");
 			}
 			break;
 		}
@@ -155,7 +156,7 @@ void TypeCheck::check(Stmt &stmt) {
 			assert(stmt.targetexpr.restype.tag == Type::PTR);
 			possiblyCoerceInt(stmt.expr, *stmt.targetexpr.restype.contained);
 			if (stmt.targetexpr.restype != Type::makePointer(stmt.expr.restype)) {
-				throw runtime_error("Unequal types in storing assignment");
+				throw TypeError(stmt.site, "Unequal types in storing assignment");
 			}
 			break;
 		}
@@ -164,7 +165,7 @@ void TypeCheck::check(Stmt &stmt) {
 			check(stmt.expr);
 			possiblyCoerceInt(stmt.expr, Type::makeUInt(1));
 			if (stmt.expr.restype != Type::makeUInt(1)) {
-				throw runtime_error("Invalid type in if condition");
+				throw TypeError(stmt.site, "Invalid type in if condition");
 			}
 			enterScope(); check(stmt.ch[0]); leaveScope();
 			enterScope(); check(stmt.ch[1]); leaveScope();
@@ -174,7 +175,7 @@ void TypeCheck::check(Stmt &stmt) {
 			check(stmt.expr);
 			possiblyCoerceInt(stmt.expr, Type::makeUInt(1));
 			if (stmt.expr.restype != Type::makeUInt(1)) {
-				throw runtime_error("Invalid type in while condition");
+				throw TypeError(stmt.site, "Invalid type in while condition");
 			}
 			loopDepth++;
 			enterScope(); check(stmt.ch[0]); leaveScope();
@@ -188,17 +189,17 @@ void TypeCheck::check(Stmt &stmt) {
 			break;
 
 		case Stmt::CALL:
-			checkCall(stmt.name, stmt.args);
+			checkCall(stmt.site, stmt.name, stmt.args);
 			break;
 
 		case Stmt::CALLR: {
-			Type rettype = checkCall(stmt.name, stmt.args);
+			Type rettype = checkCall(stmt.site, stmt.name, stmt.args);
 			Type vartype = lookup(stmt.target);
 			if (vartype.tag == -1) {
-				throw runtime_error("Call assignment to undeclared variable");
+				throw TypeError(stmt.site, "Call assignment to undeclared variable");
 			}
 			if (rettype != vartype) {
-				throw runtime_error("Invalid types in call assignment");
+				throw TypeError(stmt.site, "Invalid types in call assignment");
 			}
 			break;
 		}
@@ -207,7 +208,7 @@ void TypeCheck::check(Stmt &stmt) {
 			const FuncDesc &descr = functions.find(currentFunction)->second;
 			check(stmt.expr);
 			if (stmt.expr.restype != descr.first) {
-				throw runtime_error("Invalid type in return statement");
+				throw TypeError(stmt.site, "Invalid type in return statement");
 			}
 			break;
 		}
@@ -215,14 +216,14 @@ void TypeCheck::check(Stmt &stmt) {
 		case Stmt::RETURNX: {
 			const FuncDesc &descr = functions.find(currentFunction)->second;
 			if (descr.first.tag != Type::VOID) {
-				throw runtime_error("Cannot return void in non-void function");
+				throw TypeError(stmt.site, "Cannot return void in non-void function");
 			}
 			break;
 		}
 
 		case Stmt::BREAK:
 			if (loopDepth == 0) {
-				throw runtime_error("Break statement outside loop");
+				throw TypeError(stmt.site, "Break statement outside loop");
 			}
 			break;
 
@@ -244,7 +245,7 @@ void TypeCheck::check(Expr &expr) {
 		case Expr::VARIABLE: {
 			Type type = lookup(expr.name);
 			if (type.tag == -1) {
-				throw runtime_error("Use of undeclared variable");
+				throw TypeError(expr.site, "Use of undeclared variable");
 			}
 			Type largetype = type.growInt();
 			if (largetype != type) {
@@ -265,12 +266,16 @@ void TypeCheck::check(Expr &expr) {
 			check(*expr.e2);
 			if (expr.e1->restype.tag == Type::INT && expr.e2->restype.tag == Type::INT) {
 				expr.restype = Type::makeInt(64);
-				expr.mintype = Type::maxType(expr.e1->mintype, expr.e2->mintype);
+				const auto mmintype = Type::maxType(expr.e1->mintype, expr.e2->mintype);
+				if (mmintype) expr.mintype = *mmintype;
+				else throw TypeError(expr.site, "Cannot compute maximum type of incompatible types");
 			} else if (expr.e1->restype.tag == Type::UINT && expr.e2->restype.tag == Type::UINT) {
 				expr.restype = Type::makeUInt(64);
-				expr.mintype = Type::maxType(expr.e1->mintype, expr.e2->mintype);
+				const auto mmintype = Type::maxType(expr.e1->mintype, expr.e2->mintype);
+				if (mmintype) expr.mintype = *mmintype;
+				else throw TypeError(expr.site, "Cannot compute maximum type of incompatible types");
 			} else {
-				throw runtime_error("Invalid types in binary arithmetic operator");
+				throw TypeError(expr.site, "Invalid types in binary arithmetic operator");
 			}
 
 			if (expr.e1->restype != expr.restype) {
@@ -299,7 +304,7 @@ void TypeCheck::check(Expr &expr) {
 				expr.restype = Type::makeUInt(1);
 				expr.mintype = Type::makeUInt(1);
 			} else {
-				throw runtime_error("Invalid types in binary comparison operator");
+				throw TypeError(expr.site, "Invalid types in binary comparison operator");
 			}
 			break;
 		}
@@ -314,7 +319,7 @@ void TypeCheck::check(Expr &expr) {
 				expr.restype = Type::makeUInt(1);
 				expr.mintype = Type::makeUInt(1);
 			} else {
-				throw runtime_error("Invalid types in binary equality operator");
+				throw TypeError(expr.site, "Invalid types in binary equality operator");
 			}
 			break;
 		}
@@ -329,7 +334,7 @@ void TypeCheck::check(Expr &expr) {
 				expr.restype = Type::makeUInt(1);
 				expr.mintype = Type::makeUInt(1);
 			} else {
-				throw runtime_error("Invalid types in binary boolean operator");
+				throw TypeError(expr.site, "Invalid types in binary boolean operator");
 			}
 			break;
 		}
@@ -343,14 +348,14 @@ void TypeCheck::check(Expr &expr) {
 				expr.restype = expr.type;
 				expr.mintype = expr.type;
 			} else {
-				throw runtime_error("Invalid types in cast");
+				throw TypeError(expr.site, "Invalid types in cast");
 			}
 			break;
 
 		case Expr::PTRCAST: {
 			check(*expr.e1);
 			if (expr.type.tag != Type::PTR) {
-				throw runtime_error("Pointer cast to non-pointer type");
+				throw TypeError(expr.site, "Pointer cast to non-pointer type");
 			}
 			Type destType = expr.type;
 			if (expr.e1->restype.isIntegral()) {
@@ -363,13 +368,13 @@ void TypeCheck::check(Expr &expr) {
 				expr.restype = destType;
 				expr.mintype = destType;
 			} else {
-				throw runtime_error("Pointer cast from non-number-like type");
+				throw TypeError(expr.site, "Pointer cast from non-number-like type");
 			}
 			break;
 		}
 
 		case Expr::CALL: {
-			Type rettype = checkCall(expr.name, expr.args);
+			Type rettype = checkCall(expr.site, expr.name, expr.args);
 			expr.restype = rettype.growInt();
 			expr.mintype = rettype;
 			break;
@@ -379,10 +384,10 @@ void TypeCheck::check(Expr &expr) {
 			check(*expr.e1);
 			check(*expr.e2);
 			if (!expr.e2->restype.isIntegral()) {
-				throw runtime_error("Cannot index pointer with non-integer type");
+				throw TypeError(expr.site, "Cannot index pointer with non-integer type");
 			}
 			if (expr.e1->restype.tag != Type::PTR) {
-				throw runtime_error("Cannot index non-pointer");
+				throw TypeError(expr.site, "Cannot index non-pointer");
 			}
 			expr.restype = expr.e1->restype.contained->growInt();
 			expr.mintype = *expr.e1->restype.contained;
@@ -393,10 +398,10 @@ void TypeCheck::check(Expr &expr) {
 			check(*expr.e1);
 			check(*expr.e2);
 			if (!expr.e2->restype.isIntegral()) {
-				throw runtime_error("Cannot ref-index pointer with non-integer type");
+				throw TypeError(expr.site, "Cannot ref-index pointer with non-integer type");
 			}
 			if (expr.e1->restype.tag != Type::PTR) {
-				throw runtime_error("Cannot ref-index non-pointer");
+				throw TypeError(expr.site, "Cannot ref-index non-pointer");
 			}
 			expr.restype = expr.e1->restype;
 			expr.mintype = expr.e1->restype;

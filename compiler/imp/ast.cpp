@@ -69,11 +69,6 @@ Type Type::maxType(const Type &a, const Type &b) {
 	if (a == b) return a;
 	if (a.tag == INT && b.tag == INT) return makeInt(max(a.bits, b.bits));
 	if (a.tag == UINT && b.tag == UINT) return makeUInt(max(a.bits, b.bits));
-	cerr << "maxType(";
-	a.writeProlog(cerr);
-	cerr << ",";
-	b.writeProlog(cerr);
-	cerr << ")" << endl;
 	throw runtime_error("Cannot compute maximum type of incompatible types");
 }
 
@@ -86,8 +81,8 @@ int Type::size() const {
 		case INT:
 		case UINT:
 			assert(bits == 1 || bits == 8 || bits == 16 || bits == 32 || bits == 64);
-			return bits / 8;
-		case PTR: return 8;  // pointer
+			return (bits + 7) / 8;
+		case PTR: return 8;
 		default: assert(false);
 	}
 }

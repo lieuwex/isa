@@ -15,11 +15,14 @@ use std::{
 
 fn main() -> Result<(), io::Error> {
     let args: Vec<String> = env::args().collect();
-    let fname = &args[1];
+    if args.len() < 2 {
+        eprintln!("expected at least 2 args, got {}", args.len());
+        exit(1);
+    }
 
     let mut stdout = io::stdout();
 
-    let s = fs::read_to_string(fname)?;
+    let s = fs::read_to_string(&args[1])?;
 
     let mut err = false;
     for instr in parse(&s) {

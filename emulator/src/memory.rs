@@ -2,9 +2,11 @@ use std::{
     io::{self, Read, Write},
     mem,
 };
+use crate::{debug::DebugMode};
 
 pub struct Memory {
     data: Vec<u8>,
+    debug_mode: DebugMode,
 }
 
 impl Memory {
@@ -24,6 +26,10 @@ impl Memory {
             return None;
         }
 
+        if self.debug_mode == DebugMode::Lackey {
+            println!("L {:X},{}", addr, mem::size_of::<T>());
+        }
+
         let data = self.data.as_ptr();
         unsafe {
             let ptr = data.add(addr) as *const T;
@@ -41,6 +47,10 @@ impl Memory {
             return false;
         }
 
+        if self.debug_mode == DebugMode::Lackey {
+            println!("S {:X},{}", addr, mem::size_of::<T>());
+        }
+
         let data = self.data.as_mut_ptr();
         unsafe {
             let ptr = data.add(addr) as *mut T;
@@ -50,9 +60,10 @@ impl Memory {
         true
     }
 
-    pub fn new(size: usize) -> Self {
+    pub fn new(size: usize, debug_mode: DebugMode) -> Self {
         Self {
             data: vec![0; size],
+            debug_mode,
         }
     }
 }

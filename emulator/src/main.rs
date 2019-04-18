@@ -6,8 +6,9 @@ mod instruction;
 mod memory;
 mod opcode;
 mod registers;
+mod debug;
 
-use crate::cpu::*;
+use crate::{cpu::*,debug::DebugMode};
 use std::{env, fs, io, slice};
 
 fn main() -> Result<(), io::Error> {
@@ -21,7 +22,16 @@ fn main() -> Result<(), io::Error> {
         slice::from_raw_parts(ptr, bytes.len() / 8)
     };
 
-    let debug_mode = env::var_os("DEBUG").is_some();
+    let debug_mode = match &env::var_os("DEBUG").and_then(|x| x.into_string().ok()) {
+        // rip
+        Some(ref s) => match &s[..] {
+            "LACKEY" => DebugMode::Lackey,
+            "HUMAN" => DebugMode::Human,
+            _ => DebugMode::None,
+        }
+
+        _ => DebugMode::None,
+    };
     let mut cpu = CPU::new(Vec::from(prog), debug_mode);
 
     if cpu.exec_loop().is_none() {

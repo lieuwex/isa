@@ -1,4 +1,4 @@
-use crate::{instruction::*, memory::Memory, opcode::Opcode, registers::Registers};
+use crate::{instruction::*, debug::DebugMode, memory::Memory, opcode::Opcode, registers::Registers};
 use std::mem::size_of_val;
 
 fn sign_extend(val: u64, nbits: u32) -> u64 {
@@ -7,7 +7,7 @@ fn sign_extend(val: u64, nbits: u32) -> u64 {
 }
 
 pub struct CPU {
-    debug_mode: bool,
+    debug_mode: DebugMode,
 
     regs: Registers,
     mem: Memory,
@@ -160,24 +160,26 @@ impl CPU {
             }
 
             let instr = self.get_instruction()?;
-            if self.debug_mode {
-                println!("{:?}\n{:?}\n", self.regs, instr);
+            match self.debug_mode {
+                DebugMode::Human => println!("{:?}\n{:?}\n", self.regs, instr),
+                DebugMode::Lackey => println!("I {:X} 8", pc),
+                _ => {},
             }
             self.inc_pc();
             self.execute(&instr);
         }
 
-        if self.debug_mode {
+        if self.debug_mode == DebugMode::Human {
             println!("{:?}", self.regs);
         }
         Some(())
     }
 
-    pub fn new(program: Vec<u64>, debug_mode: bool) -> Self {
+    pub fn new(program: Vec<u64>, debug_mode: DebugMode) -> Self {
         let mut res = Self {
             debug_mode,
             regs: Registers::new(),
-            mem: Memory::new(25 * 1024 * 1024), // 25 MiB
+            mem: Memory::new(25 * 1024 * 1024, debug_mode), // 25 MiB
             endloc: 0,
         };
 

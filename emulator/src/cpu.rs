@@ -1,8 +1,6 @@
 use crate::{instruction::*, memory::Memory, opcode::Opcode, registers::Registers};
 use std::mem::size_of_val;
 
-static END_MARKER: u64 = 0xCAFEBAAAABBEEEEE;
-
 fn sign_extend(val: u64, nbits: u32) -> u64 {
     let x = size_of_val(&val) as u32 * 8 - nbits;
     val.wrapping_shl(x).wrapping_shr(x)
@@ -13,6 +11,8 @@ pub struct CPU {
 
     regs: Registers,
     mem: Memory,
+
+    endloc: usize,
 }
 
 impl CPU {
@@ -155,8 +155,7 @@ impl CPU {
     pub fn exec_loop(&mut self) -> Option<()> {
         loop {
             let pc = self.get_pc();
-            let raw: u64 = self.mem.read_data(pc)?;
-            if raw == END_MARKER {
+            if pc >= self.endloc {
                 break;
             }
 
@@ -179,6 +178,7 @@ impl CPU {
             debug_mode,
             regs: Registers::new(),
             mem: Memory::new(25 * 1024 * 1024), // 25 MiB
+            endloc: 0,
         };
 
         // PC starts as 0x1000, why not.
@@ -188,7 +188,7 @@ impl CPU {
             res.mem.write_data(loc, val);
             loc += 8;
         }
-        res.mem.write_data(loc, END_MARKER);
+        res.endloc = loc;
 
         res
     }

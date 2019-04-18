@@ -254,7 +254,6 @@ impl ParseContext {
             };
         }
 
-        // REVIEW: check if non decimal numbers are supported
         // match the parsed opcode to its configuration, then retrieve the correct
         // values for every field
         match res.opcode.configuration() {

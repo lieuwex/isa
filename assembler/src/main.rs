@@ -32,7 +32,7 @@ fn main() -> Result<(), io::Error> {
                 err = true;
             }
             Ok(instr) => {
-                let instrs = convert_instruction(&instr);
+                let instrs = convert_instruction(&instr).unwrap();
                 for instr in instrs {
                     let val = instr.encode();
                     let bytes: [u8; 8] = unsafe { transmute(val.to_le()) };

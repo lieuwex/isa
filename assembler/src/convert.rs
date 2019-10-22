@@ -1,12 +1,12 @@
 use crate::{instruction::*, opcode::*};
 
-pub fn convert_instruction(instr: &InternalInstruction) -> Vec<Instruction> {
+pub fn convert_instruction(instr: &InternalInstruction) -> Result<Vec<Instruction>, &'static str> {
     let immediate = match instr.immediate {
         Immediate::Value(imm) => imm,
-        _ => panic!("invalid instruction immediate"),
+        _ => return Err("invalid instruction immediate"),
     };
 
-    match instr.opcode {
+    let res = match instr.opcode {
         InternalOpcode::Pseudo(PseudoOpcode::j) => vec![Instruction {
             opcode: Opcode::jnz,
             rs1: 0,
@@ -37,5 +37,6 @@ pub fn convert_instruction(instr: &InternalInstruction) -> Vec<Instruction> {
             rd: instr.rd,
             immediate: immediate,
         }],
-    }
+    };
+    Ok(res)
 }

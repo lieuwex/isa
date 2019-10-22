@@ -22,10 +22,10 @@ impl CPU {
     pub fn get_pc(&self) -> usize {
         self.get_reg(0) as usize
     }
-    pub fn get_instruction(&self) -> Option<Instruction> {
+    pub fn get_instruction(&self) -> Result<Instruction, &'static str> {
         let pc = self.get_pc();
-        let raw: u64 = self.mem.read_data(pc)?;
-        Some(instruction_decode(raw))
+        let raw: u64 = self.mem.read_data(pc).ok_or("memory out of bounds")?;
+        instruction_decode(raw).ok_or("can't decode instruction")
     }
 
     pub fn set_reg(&mut self, i: usize, val: u64) {
@@ -134,7 +134,7 @@ impl CPU {
         true
     }
 
-    pub fn execute(&mut self, instr: &Instruction) {
+    pub fn execute(&mut self, instr: &Instruction) -> Result<(), String> {
         let mut done = false;
         if !done { done = self.arithmatic(instr); }
         if !done { done = self.jumps(instr); }
@@ -147,12 +147,14 @@ impl CPU {
             done = true;
         }
 
-        if !done {
-            panic!("unhandled instruction: {:?}", instr);
+        if done {
+            Ok(())
+        } else {
+            Err(format!("unhandled instruction: {:?}", instr))
         }
     }
 
-    pub fn exec_loop(&mut self) -> Option<()> {
+    pub fn exec_loop(&mut self) -> Result<(), String> {
         loop {
             let pc = self.get_pc();
             if pc >= self.endloc {
@@ -166,13 +168,13 @@ impl CPU {
                 _ => {},
             }
             self.inc_pc();
-            self.execute(&instr);
+            self.execute(&instr)?;
         }
 
         if self.debug_mode == DebugMode::Human {
             println!("{:?}", self.regs);
         }
-        Some(())
+        Ok(())
     }
 
     pub fn new(program: Vec<u64>, debug_mode: DebugMode) -> Self {

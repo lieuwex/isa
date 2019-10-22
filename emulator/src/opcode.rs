@@ -29,11 +29,10 @@ pub enum Opcode {
     s32,  // 0b0011001
     l64,  // 0b0011010
     s64,  // 0b0011011
-    unknown,
 }
 
-pub fn u8_to_opcode(opcode: u8) -> Opcode {
-    match opcode {
+pub fn u8_to_opcode(opcode: u8) -> Option<Opcode> {
+    let res = match opcode {
         0b0000000 => Opcode::li,
         0b0000001 => Opcode::mv,
         0b0000010 => Opcode::add,
@@ -63,6 +62,7 @@ pub fn u8_to_opcode(opcode: u8) -> Opcode {
         0b0011010 => Opcode::l64,
         0b0011011 => Opcode::s64,
 
-        _ => Opcode::unknown,
-    }
+        _ => return None,
+    };
+    Some(res)
 }

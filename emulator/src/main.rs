@@ -34,8 +34,8 @@ fn main() -> Result<(), io::Error> {
     };
     let mut cpu = CPU::new(Vec::from(prog), debug_mode);
 
-    if cpu.exec_loop().is_none() {
-        eprintln!("error while executing");
+    if let Err(err) = cpu.exec_loop() {
+        eprintln!("error while executing: {}", err);
     }
 
     Ok(())

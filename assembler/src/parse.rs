@@ -26,11 +26,6 @@ fn err_int_parse(line_number: usize) -> ParseError {
     }
 }
 
-struct ParseContext {
-    labels: HashMap<String, i64>,
-    n_instructions: i64,
-}
-
 // "tokenize"
 struct Tokenizer {
     chars: Vec<char>,
@@ -109,6 +104,11 @@ impl Tokenizer {
     }
 }
 
+struct ParseContext {
+    labels: HashMap<String, i64>,
+    n_instructions: i64,
+}
+
 impl ParseContext {
     fn parse_line(
         &mut self,
@@ -116,12 +116,12 @@ impl ParseContext {
         line_number: usize,
     ) -> Option<Result<InternalInstruction, ParseError>> {
         lazy_static! {
-            static ref commentreg: Regex = Regex::new(r";.+$").unwrap();
-            static ref labelreg: Regex = Regex::new(r"(?i)^([a-z_]\w*):$").unwrap();
+            static ref COMMENTREG: Regex = Regex::new(r";.+$").unwrap();
+            static ref LABELREG: Regex = Regex::new(r"(?i)^([a-z_]\w*):$").unwrap();
         }
 
         // remove comments and trim the line, we only need code
-        let line = commentreg.replace_all(line, "");
+        let line = COMMENTREG.replace_all(line, "");
         let line = line.trim();
 
         // skip lines without code
@@ -131,7 +131,7 @@ impl ParseContext {
 
         // if this is a label declaration line, add the label to the labels map and skip
         // the current line
-        if let Some(caps) = labelreg.captures(line) {
+        if let Some(caps) = LABELREG.captures(line) {
             self.labels.insert(caps[1].to_string(), self.n_instructions);
             return None;
         }
@@ -175,11 +175,11 @@ impl ParseContext {
         }
 
         let n_instr = self.n_instructions;
-        let get_immediate = |n: usize| -> Result<Immediate, ParseError> {
+        let get_immediate = |i: usize| -> Result<Immediate, ParseError> {
             // the immediate should be a literal value when the first
             // character is a digit, otherwise we treat it as a unevaluated
             // label reference.
-            let r2 = &args[n];
+            let r2 = &args[i];
 
             let c = match r2.chars().next() {
                 None => {

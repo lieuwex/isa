@@ -7,7 +7,7 @@ pub fn convert_instruction(instr: &InternalInstruction) -> Vec<Instruction> {
     };
 
     match instr.opcode {
-        InternalOpcode::Opaque(OpaqueOpcode::j) => vec![Instruction {
+        InternalOpcode::Pseudo(PseudoOpcode::j) => vec![Instruction {
             opcode: Opcode::jnz,
             rs1: 0,
             rs2: 0,
@@ -15,14 +15,14 @@ pub fn convert_instruction(instr: &InternalInstruction) -> Vec<Instruction> {
             immediate: immediate,
         }],
 
-        InternalOpcode::Opaque(OpaqueOpcode::gt) => vec![Instruction {
+        InternalOpcode::Pseudo(PseudoOpcode::gt) => vec![Instruction {
             opcode: Opcode::lt,
             rs1: instr.rs2,
             rs2: instr.rs1,
             rd: instr.rd,
             immediate: 0,
         }],
-        InternalOpcode::Opaque(OpaqueOpcode::gte) => vec![Instruction {
+        InternalOpcode::Pseudo(PseudoOpcode::gte) => vec![Instruction {
             opcode: Opcode::lte,
             rs1: instr.rs2,
             rs2: instr.rs1,

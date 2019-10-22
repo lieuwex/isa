@@ -1,4 +1,20 @@
 #[allow(non_camel_case_types)]
+#[derive(Copy, Clone)]
+pub enum Configuration {
+    imm,
+    rd_imm,
+    r1_imm,
+    rd_r1_r2,
+    rd_r1,
+    r1_r2,
+}
+
+trait OpcodeLike: Sized {
+    fn from_str(s: &str) -> Option<Self>;
+    fn configuration(self) -> Configuration;
+}
+
+#[allow(non_camel_case_types)]
 #[derive(Copy, Clone, Debug)]
 pub enum Opcode {
     li,   // 0b0000000
@@ -31,55 +47,44 @@ pub enum Opcode {
     s64,  // 0b0011011
 }
 
-pub fn str_to_opcode(s: &str) -> Option<Opcode> {
-    let res = match s.to_lowercase().as_str() {
-        "li" => Opcode::li,
-        "mv" => Opcode::mv,
-        "add" => Opcode::add,
-        "sub" => Opcode::sub,
-        "mul" => Opcode::mul,
-        "div" => Opcode::div,
-        "not" => Opcode::not,
-        "and" => Opcode::and,
-        "or" => Opcode::or,
-        "xor" => Opcode::xor,
-        "sll" => Opcode::sll,
-        "slr" => Opcode::slr,
-        "sar" => Opcode::sar,
-        "lt" => Opcode::lt,
-        "lte" => Opcode::lte,
-        "call" => Opcode::call,
-        "jnz" => Opcode::jnz,
-        "jz" => Opcode::jz,
-        "jnzr" => Opcode::jnzr,
-        "jzr" => Opcode::jzr,
-        "l8" => Opcode::l8,
-        "s8" => Opcode::s8,
-        "l16" => Opcode::l16,
-        "s16" => Opcode::s16,
-        "l32" => Opcode::l32,
-        "s32" => Opcode::s32,
-        "l64" => Opcode::l64,
-        "s64" => Opcode::s64,
+impl OpcodeLike for Opcode {
+    fn from_str(s: &str) -> Option<Self> {
+        let res = match s.to_lowercase().as_str() {
+            "li" => Opcode::li,
+            "mv" => Opcode::mv,
+            "add" => Opcode::add,
+            "sub" => Opcode::sub,
+            "mul" => Opcode::mul,
+            "div" => Opcode::div,
+            "not" => Opcode::not,
+            "and" => Opcode::and,
+            "or" => Opcode::or,
+            "xor" => Opcode::xor,
+            "sll" => Opcode::sll,
+            "slr" => Opcode::slr,
+            "sar" => Opcode::sar,
+            "lt" => Opcode::lt,
+            "lte" => Opcode::lte,
+            "call" => Opcode::call,
+            "jnz" => Opcode::jnz,
+            "jz" => Opcode::jz,
+            "jnzr" => Opcode::jnzr,
+            "jzr" => Opcode::jzr,
+            "l8" => Opcode::l8,
+            "s8" => Opcode::s8,
+            "l16" => Opcode::l16,
+            "s16" => Opcode::s16,
+            "l32" => Opcode::l32,
+            "s32" => Opcode::s32,
+            "l64" => Opcode::l64,
+            "s64" => Opcode::s64,
 
-        _ => return None,
-    };
-    Some(res)
-}
+            _ => return None,
+        };
+        Some(res)
+    }
 
-#[allow(non_camel_case_types)]
-#[derive(Copy, Clone)]
-pub enum Configuration {
-    imm,
-    rd_imm,
-    r1_imm,
-    rd_r1_r2,
-    rd_r1,
-    r1_r2,
-}
-
-impl Opcode {
-    pub fn configuration(self) -> Configuration {
+    fn configuration(self) -> Configuration {
         match self {
             Opcode::add => Configuration::rd_r1_r2,
             Opcode::sub => Configuration::rd_r1_r2,
@@ -119,19 +124,29 @@ impl Opcode {
 
 #[allow(non_camel_case_types)]
 #[derive(Copy, Clone, Debug, PartialEq)]
-pub enum OpaqueOpcode {
+pub enum PseudoOpcode {
     j,
     gt,
     gte,
 }
 
-impl OpaqueOpcode {
+impl OpcodeLike for PseudoOpcode {
+    fn from_str(s: &str) -> Option<Self> {
+        let res = match s.to_lowercase().as_str() {
+            "j" => PseudoOpcode::j,
+            "gt" => PseudoOpcode::gt,
+            "gte" => PseudoOpcode::gte,
+            _ => return None,
+        };
+        Some(res)
+    }
+
     fn configuration(self) -> Configuration {
         match self {
-            OpaqueOpcode::j => Configuration::imm,
+            PseudoOpcode::j => Configuration::imm,
 
-            OpaqueOpcode::gt => Configuration::rd_r1_r2,
-            OpaqueOpcode::gte => Configuration::rd_r1_r2,
+            PseudoOpcode::gt => Configuration::rd_r1_r2,
+            PseudoOpcode::gte => Configuration::rd_r1_r2,
         }
     }
 }
@@ -139,28 +154,24 @@ impl OpaqueOpcode {
 #[derive(Debug, Clone, Copy)]
 pub enum InternalOpcode {
     Real(Opcode),
-    Opaque(OpaqueOpcode),
+    Pseudo(PseudoOpcode),
 }
 
 pub fn str_to_internal_opcode(s: &str) -> Option<InternalOpcode> {
-    if let Some(op) = str_to_opcode(s) {
-        return Some(InternalOpcode::Real(op));
-    };
-
-    let opcode = match s {
-        "j" => InternalOpcode::Opaque(OpaqueOpcode::j),
-        "gt" => InternalOpcode::Opaque(OpaqueOpcode::gt),
-        "gte" => InternalOpcode::Opaque(OpaqueOpcode::gte),
-        _ => return None,
-    };
-    Some(opcode)
+    if let Some(op) = Opcode::from_str(s) {
+        Some(InternalOpcode::Real(op))
+    } else if let Some(op) = PseudoOpcode::from_str(s) {
+        Some(InternalOpcode::Pseudo(op))
+    } else {
+        None
+    }
 }
 
 impl InternalOpcode {
     pub fn configuration(self) -> Configuration {
         match self {
             InternalOpcode::Real(x) => x.configuration(),
-            InternalOpcode::Opaque(x) => x.configuration(),
+            InternalOpcode::Pseudo(x) => x.configuration(),
         }
     }
 }
